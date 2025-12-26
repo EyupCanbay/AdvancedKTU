@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #14aab8;
+  --color-primary-dark: #0e7c86;
+  --color-accent: #10b981;
+  --color-background-dark: #112022;
+  --color-surface-dark: #1a2c2e;
+  --color-border-dark: #244447;
+  
+  --font-display: "Manrope", sans-serif;
+  --font-body: "Noto Sans", sans-serif;
+}
+
+@layer components {
+  .glass-panel {
+    @apply bg-[#1a2c2e]/60 backdrop-blur-[12px] border border-[#244447]/50;
+  }
+  
+  .metric-card-glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .danger-card-glass {
+    background: linear-gradient(145deg, rgba(26, 44, 46, 0.9) 0%, rgba(17, 32, 34, 0.95) 100%);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  }
+}
