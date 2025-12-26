@@ -1,0 +1,312 @@
+basePath: /
+definitions:
+  domain.Address:
+    properties:
+      city:
+        example: Istanbul
+        type: string
+      district:
+        example: Kadikoy
+        type: string
+      full_address:
+        example: Caferaga mah. Moda cad. No:1
+        type: string
+      title:
+        example: Ev
+        type: string
+    type: object
+  domain.User:
+    properties:
+      active:
+        type: boolean
+      addresses:
+        items:
+          $ref: '#/definitions/domain.Address'
+        type: array
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  http.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  http.LoginResponse:
+    properties:
+      message:
+        type: string
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/domain.User'
+    type: object
+  http.RegisterRequest:
+    properties:
+      addresses:
+        description: Zorunlu alan
+        items:
+          $ref: '#/definitions/domain.Address'
+        type: array
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: Go, Echo ve MongoDB kullanılan örnek bir authentication servisi.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Authentication Service API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Email ve şifre ile giriş yapar, JWT token döner.
+      parameters:
+      - description: Giriş Bilgileri
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/http.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Kullanıcı Girişi
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Sisteme yeni bir kullanıcı ekler. En az bir adres girilmesi zorunludur.
+      parameters:
+      - description: Kayıt Bilgileri (Adres Dahil)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/http.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Yeni Kullanıcı Kaydı
+      tags:
+      - Auth
+  /health:
+    get:
+      description: API'nin çalışıp çalışmadığını kontrol eder.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Sistem Sağlık Kontrolü
+      tags:
+      - System
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Veritabanındaki tüm kullanıcıları adresleriyle birlikte listeler.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.User'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Tüm Kullanıcıları Getir
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Doğrudan bir user objesi oluşturur. Adres listesi zorunludur.
+      parameters:
+      - description: User Object (With Addresses)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Admin Tarafından Kullanıcı Ekle
+      tags:
+      - Users
+  /users/{id}:
+    delete:
+      description: Verilen ID'ye sahip kullanıcıyı siler.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Kullanıcı Sil
+      tags:
+      - Users
+    get:
+      consumes:
+      - application/json
+      description: Verilen ID'ye sahip kullanıcıyı ve adreslerini döner.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: ID ile Kullanıcı Getir
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: Mevcut bir kullanıcıyı günceller.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated User Object
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Kullanıcı Güncelle
+      tags:
+      - Users
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
