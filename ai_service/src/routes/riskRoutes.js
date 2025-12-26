@@ -45,7 +45,9 @@ const router = express.Router();
  */
 router.post('/risk-degree', async (req, res, next) => {
     try {
-        const pathInput = req.body.path;
+        const pathInput = req.body.image_path;
+
+        console.log("Received path:", pathInput);
 
         if (!pathInput) {
             return res.status(400).json({
