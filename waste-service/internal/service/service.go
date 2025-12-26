@@ -64,18 +64,26 @@ func (s *wasteService) UploadAndAnalyze(ctx context.Context, userID string, file
 		Status:      "analyzing",
 	}
 
+	// Veritabanına kaydet (analyzing durumunda)
+	if err := s.repo.Create(ctx, waste); err != nil {
+		return nil, err
+	}
+
+	// AI servisini çağır
 	analysis, err := s.callAIService(fullPath, description)
 
 	if err == nil {
-		waste.AIAnalysis = analysis
-		waste.Status = "analyzed"
+		// AI analizi başarılı ise veritabanını güncelle
+		if err := s.repo.UpdateAnalysis(ctx, waste.ID, analysis); err != nil {
+			fmt.Printf("Analiz Kaydı Hatası: %v\n", err)
+		} else {
+			waste.AIAnalysis = analysis
+			waste.Status = "analyzed"
+		}
 	} else {
+		// AI analizi başarısız ise durumu güncelle
 		fmt.Printf("AI Hatası: %v\n", err)
 		waste.Status = "analysis_failed"
-	}
-
-	if err := s.repo.Create(ctx, waste); err != nil {
-		return nil, err
 	}
 
 	return waste, nil
