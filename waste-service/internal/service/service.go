@@ -138,3 +138,25 @@ func (s *wasteService) CreateCollectionRequest(ctx context.Context, userID, wast
 	err := s.repo.CreateRequest(ctx, req)
 	return req, err
 }
+
+// --- YENİ EKLENEN METODLAR (NOKTA YÖNETİMİ) ---
+
+func (s *wasteService) CreatePoint(ctx context.Context, point *domain.CollectionPoint) error {
+	return s.repo.CreatePoint(ctx, point)
+}
+
+func (s *wasteService) UpdatePoint(ctx context.Context, pointID string, point *domain.CollectionPoint) error {
+	objID, err := primitive.ObjectIDFromHex(pointID)
+	if err != nil {
+		return fmt.Errorf("geçersiz ID formatı")
+	}
+	return s.repo.UpdatePoint(ctx, objID, point)
+}
+
+func (s *wasteService) DeletePoint(ctx context.Context, pointID string) error {
+	objID, err := primitive.ObjectIDFromHex(pointID)
+	if err != nil {
+		return fmt.Errorf("geçersiz ID formatı")
+	}
+	return s.repo.DeletePoint(ctx, objID)
+}

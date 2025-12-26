@@ -58,13 +58,43 @@ func (m *mongoRepository) CreateRequest(ctx context.Context, req *domain.Collect
 
 // Proje ilk açıldığında haritada nokta görünsün diye sahte veri basar
 func (m *mongoRepository) SeedPoints(ctx context.Context) error {
-    count, _ := m.db.Collection("points").CountDocuments(ctx, bson.M{})
-    if count > 0 { return nil }
+	count, _ := m.db.Collection("points").CountDocuments(ctx, bson.M{})
+	if count > 0 {
+		return nil
+	}
 
-    points := []interface{}{
-        domain.CollectionPoint{Name: "KTÜ Toplama Merkezi", Latitude: 40.995, Longitude: 39.771, Address: "Kanuni Kampüsü"},
-        domain.CollectionPoint{Name: "Meydan Geri Dönüşüm", Latitude: 41.005, Longitude: 39.722, Address: "Meydan Parkı Yanı"},
-    }
-    _, err := m.db.Collection("points").InsertMany(ctx, points)
-    return err
+	points := []interface{}{
+		domain.CollectionPoint{Name: "KTÜ Toplama Merkezi", Latitude: 40.995, Longitude: 39.771, Address: "Kanuni Kampüsü"},
+		domain.CollectionPoint{Name: "Meydan Geri Dönüşüm", Latitude: 41.005, Longitude: 39.722, Address: "Meydan Parkı Yanı"},
+	}
+	_, err := m.db.Collection("points").InsertMany(ctx, points)
+	return err
+}
+
+// --- YENİ EKLENEN METODLAR (NOKTA YÖNETİMİ) ---
+
+func (m *mongoRepository) CreatePoint(ctx context.Context, point *domain.CollectionPoint) error {
+	point.ID = primitive.NewObjectID()
+	_, err := m.db.Collection("points").InsertOne(ctx, point)
+	return err
+}
+
+func (m *mongoRepository) UpdatePoint(ctx context.Context, id primitive.ObjectID, point *domain.CollectionPoint) error {
+	filter := bson.M{"_id": id}
+	update := bson.M{
+		"$set": bson.M{
+			"name":      point.Name,
+			"latitude":  point.Latitude,
+			"longitude": point.Longitude,
+			"address":   point.Address,
+		},
+	}
+	_, err := m.db.Collection("points").UpdateOne(ctx, filter, update)
+	return err
+}
+
+func (m *mongoRepository) DeletePoint(ctx context.Context, id primitive.ObjectID) error {
+	filter := bson.M{"_id": id}
+	_, err := m.db.Collection("points").DeleteOne(ctx, filter)
+	return err
 }

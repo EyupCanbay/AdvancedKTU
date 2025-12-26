@@ -51,7 +51,7 @@ type RequestPayload struct {
 
 func (h *WasteHandler) CreateRequest(c echo.Context) error {
 	userID := c.Get("userID").(string)
-	
+
 	var payload RequestPayload
 	if err := c.Bind(&payload); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Eksik bilgi"})
@@ -65,9 +65,55 @@ func (h *WasteHandler) CreateRequest(c echo.Context) error {
 	return c.JSON(http.StatusCreated, req)
 }
 
-// Rotaları Tanımla
+// --- YENİ EKLENEN ENDPOINT'LER (NOKTA YÖNETİMİ) ---
+
+// 4. Nokta Oluşturma
+func (h *WasteHandler) CreatePoint(c echo.Context) error {
+	var point domain.CollectionPoint
+	if err := c.Bind(&point); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Geçersiz veri"})
+	}
+
+	if err := h.service.CreatePoint(c.Request().Context(), &point); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusCreated, point)
+}
+
+// 5. Nokta Güncelleme
+func (h *WasteHandler) UpdatePoint(c echo.Context) error {
+	id := c.Param("id")
+	var point domain.CollectionPoint
+	if err := c.Bind(&point); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Geçersiz veri"})
+	}
+
+	if err := h.service.UpdatePoint(c.Request().Context(), id, &point); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "Nokta güncellendi"})
+}
+
+// 6. Nokta Silme
+func (h *WasteHandler) DeletePoint(c echo.Context) error {
+	id := c.Param("id")
+
+	if err := h.service.DeletePoint(c.Request().Context(), id); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "Nokta silindi"})
+}
+
+// Rotaları Tanımla (GÜNCELLENDİ)
 func (h *WasteHandler) RegisterRoutes(e *echo.Group) {
 	e.POST("/upload", h.Upload)
 	e.GET("/points", h.GetPoints)
 	e.POST("/requests", h.CreateRequest)
+
+	e.POST("/points", h.CreatePoint)       // Nokta ekle
+	e.PUT("/points/:id", h.UpdatePoint)    // Nokta güncelle
+	e.DELETE("/points/:id", h.DeletePoint) // Nokta sil
 }
