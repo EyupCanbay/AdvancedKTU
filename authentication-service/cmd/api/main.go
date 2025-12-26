@@ -13,10 +13,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	
+
 	// Swagger dependencies
-	echoSwagger "github.com/swaggo/echo-swagger"
 	_ "authentication-service/docs" // Bu satır swag init yapınca oluşan docs paketini import eder
+
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 // @title Authentication Service API
