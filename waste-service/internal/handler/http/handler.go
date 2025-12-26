@@ -43,6 +43,45 @@ func (h *WasteHandler) GetPoints(c echo.Context) error {
 	return c.JSON(http.StatusOK, points)
 }
 
+// 2b. Atıkları Getirme (Yeni)
+func (h *WasteHandler) GetWastes(c echo.Context) error {
+	wastes, err := h.service.GetWastes(c.Request().Context())
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+	return c.JSON(http.StatusOK, wastes)
+}
+
+// 2c. Atık Durumunu Güncelle (Yeni)
+type UpdateStatusPayload struct {
+	Status string `json:"status"`
+}
+
+func (h *WasteHandler) UpdateWasteStatus(c echo.Context) error {
+	id := c.Param("id")
+	var payload UpdateStatusPayload
+	if err := c.Bind(&payload); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Geçersiz veri"})
+	}
+
+	if err := h.service.UpdateWasteStatus(c.Request().Context(), id, payload.Status); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "Durum güncellendi"})
+}
+
+// 2d. Atık Sil (Yeni)
+func (h *WasteHandler) DeleteWaste(c echo.Context) error {
+	id := c.Param("id")
+
+	if err := h.service.DeleteWaste(c.Request().Context(), id); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "Kayıt silindi"})
+}
+
 // 3. Talep Oluşturma
 type RequestPayload struct {
 	WasteID string `json:"waste_id"`
@@ -111,6 +150,9 @@ func (h *WasteHandler) DeletePoint(c echo.Context) error {
 func (h *WasteHandler) RegisterRoutes(e *echo.Group) {
 	e.POST("/upload", h.Upload)
 	e.GET("/points", h.GetPoints)
+	e.GET("/wastes", h.GetWastes)
+	e.PATCH("/wastes/:id", h.UpdateWasteStatus) // Atık durumunu güncelle
+	e.DELETE("/wastes/:id", h.DeleteWaste)      // Atık sil
 	e.POST("/requests", h.CreateRequest)
 
 	e.POST("/points", h.CreatePoint)       // Nokta ekle

@@ -63,6 +63,7 @@ func (s *authService) Register(ctx context.Context, user *domain.User) error {
 	}
 	user.Password = string(hashedPassword)
 	user.Active = true
+	user.Role = "user" // Yeni kullanıcılar default "user" rolü alır
 
 	return s.repo.Create(ctx, user)
 }
@@ -71,6 +72,7 @@ func (s *authService) generateToken(user *domain.User) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": user.ID.Hex(),
 		"email":   user.Email,
+		"role":    user.Role, // Rol'ü token'a ekle
 		"exp":     time.Now().Add(time.Hour * 72).Unix(),
 	}
 

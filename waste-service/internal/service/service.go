@@ -125,6 +125,26 @@ func (s *wasteService) GetCollectionPoints(ctx context.Context) ([]*domain.Colle
 	return s.repo.GetAllPoints(ctx)
 }
 
+func (s *wasteService) GetWastes(ctx context.Context) ([]*domain.Waste, error) {
+	return s.repo.GetWastes(ctx)
+}
+
+func (s *wasteService) UpdateWasteStatus(ctx context.Context, wasteID, status string) error {
+	objID, err := primitive.ObjectIDFromHex(wasteID)
+	if err != nil {
+		return fmt.Errorf("geçersiz waste ID formatı")
+	}
+	return s.repo.UpdateWasteStatus(ctx, objID, status)
+}
+
+func (s *wasteService) DeleteWaste(ctx context.Context, wasteID string) error {
+	objID, err := primitive.ObjectIDFromHex(wasteID)
+	if err != nil {
+		return fmt.Errorf("geçersiz waste ID formatı")
+	}
+	return s.repo.DeleteWaste(ctx, objID)
+}
+
 func (s *wasteService) CreateCollectionRequest(ctx context.Context, userID, wasteID, pointID string) (*domain.CollectionRequest, error) {
 	wID, _ := primitive.ObjectIDFromHex(wasteID)
 	pID, _ := primitive.ObjectIDFromHex(pointID)

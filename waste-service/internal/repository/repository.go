@@ -49,6 +49,37 @@ func (m *mongoRepository) GetAllPoints(ctx context.Context) ([]*domain.Collectio
 	return points, nil
 }
 
+func (m *mongoRepository) GetWastes(ctx context.Context) ([]*domain.Waste, error) {
+	var wastes []*domain.Waste
+	cursor, err := m.db.Collection("wastes").Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	if err = cursor.All(ctx, &wastes); err != nil {
+		return nil, err
+	}
+	return wastes, nil
+}
+
+func (m *mongoRepository) UpdateWasteStatus(ctx context.Context, id primitive.ObjectID, status string) error {
+	collection := m.db.Collection("wastes")
+	filter := bson.M{"_id": id}
+	update := bson.M{
+		"$set": bson.M{
+			"status": status,
+		},
+	}
+	_, err := collection.UpdateOne(ctx, filter, update)
+	return err
+}
+
+func (m *mongoRepository) DeleteWaste(ctx context.Context, id primitive.ObjectID) error {
+	collection := m.db.Collection("wastes")
+	filter := bson.M{"_id": id}
+	_, err := collection.DeleteOne(ctx, filter)
+	return err
+}
+
 func (m *mongoRepository) CreateRequest(ctx context.Context, req *domain.CollectionRequest) error {
 	req.ID = primitive.NewObjectID()
 	req.CreatedAt = time.Now()
@@ -96,5 +127,109 @@ func (m *mongoRepository) UpdatePoint(ctx context.Context, id primitive.ObjectID
 func (m *mongoRepository) DeletePoint(ctx context.Context, id primitive.ObjectID) error {
 	filter := bson.M{"_id": id}
 	_, err := m.db.Collection("points").DeleteOne(ctx, filter)
+	return err
+}
+
+// SeedWastes creates demo waste records for testing
+func (m *mongoRepository) SeedWastes(ctx context.Context) error {
+	collection := m.db.Collection("wastes")
+
+	// Drop existing wastes for development
+	collection.DeleteMany(ctx, bson.M{})
+
+	wasteRecords := []interface{}{
+		&domain.Waste{
+			ID:          primitive.NewObjectID(),
+			UserID:      "admin@example.com",
+			ImagePath:   "/uploads/waste_1.jpg",
+			Description: "Elektronik atık - Eski telefon",
+			Status:      "analyzed",
+			AIAnalysis: &domain.AIAnalysisResult{
+				FullyChargingPhones:              5,
+				LightHours:                       120,
+				LedLighting:                      450,
+				DrivingCar:                       25.5,
+				CO2Emission:                      125.5,
+				CleanWater:                       1200,
+				SoilDegradation:                  450,
+				ContaminatingGroundwater:         300,
+				EnergyConsumptionOfSmallWorkshop: 85,
+				LossRareEarthElements:            12.5,
+				MicroplasticPollutionMarineLife:  65,
+				AnnualCarbonSequestrationTree:    15,
+				HouseholdElectricityConsumption:  180,
+				DailyWaterConsumptionPeople:      200,
+				HumanCarbonFootprintOneDay:       2.5,
+				RiskDegree:                       8,
+				Cost:                             450000,
+			},
+			CreatedAt: time.Now().AddDate(0, 0, -5),
+		},
+		&domain.Waste{
+			ID:          primitive.NewObjectID(),
+			UserID:      "admin@example.com",
+			ImagePath:   "/uploads/waste_2.jpg",
+			Description: "Plastik atık - PET şişeler",
+			Status:      "pending",
+			AIAnalysis: &domain.AIAnalysisResult{
+				FullyChargingPhones:              2,
+				LightHours:                       45,
+				LedLighting:                      200,
+				DrivingCar:                       8.2,
+				CO2Emission:                      42.3,
+				CleanWater:                       450,
+				SoilDegradation:                  120,
+				ContaminatingGroundwater:         85,
+				EnergyConsumptionOfSmallWorkshop: 25,
+				LossRareEarthElements:            2.1,
+				MicroplasticPollutionMarineLife:  155,
+				AnnualCarbonSequestrationTree:    4,
+				HouseholdElectricityConsumption:  55,
+				DailyWaterConsumptionPeople:      75,
+				HumanCarbonFootprintOneDay:       0.8,
+				RiskDegree:                       4,
+				Cost:                             15000,
+			},
+			CreatedAt: time.Now().AddDate(0, 0, -3),
+		},
+		&domain.Waste{
+			ID:          primitive.NewObjectID(),
+			UserID:      "admin@example.com",
+			ImagePath:   "/uploads/waste_3.jpg",
+			Description: "Metal atık - Alüminyum kutular",
+			Status:      "collected",
+			AIAnalysis: &domain.AIAnalysisResult{
+				FullyChargingPhones:              8,
+				LightHours:                       200,
+				LedLighting:                      750,
+				DrivingCar:                       45.5,
+				CO2Emission:                      220.5,
+				CleanWater:                       2100,
+				SoilDegradation:                  800,
+				ContaminatingGroundwater:         520,
+				EnergyConsumptionOfSmallWorkshop: 145,
+				LossRareEarthElements:            28.5,
+				MicroplasticPollutionMarineLife:  12,
+				AnnualCarbonSequestrationTree:    32,
+				HouseholdElectricityConsumption:  320,
+				DailyWaterConsumptionPeople:      450,
+				HumanCarbonFootprintOneDay:       4.5,
+				RiskDegree:                       6,
+				Cost:                             750000,
+			},
+			CreatedAt: time.Now().AddDate(0, 0, -1),
+		},
+		&domain.Waste{
+			ID:          primitive.NewObjectID(),
+			UserID:      "admin@example.com",
+			ImagePath:   "/uploads/waste_4.jpg",
+			Description: "Cam atık - Şişeler ve kavanozlar",
+			Status:      "analyzing",
+			AIAnalysis:  nil,
+			CreatedAt:   time.Now(),
+		},
+	}
+
+	_, err := collection.InsertMany(ctx, wasteRecords)
 	return err
 }
