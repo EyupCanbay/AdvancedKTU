@@ -34,36 +34,34 @@ class GeminiService {
      * @returns {string} Prompt template for Gemini API
      */
     getRiskAssessmentPrompt() {
-        return `You are a senior expert in logistics risk assessment and supply chain analysis with over 15 years of industry experience.
+        return `You are a senior expert in environmental impact assessment and carbon footprint analysis with over 15 years of industry experience.
 
-TASK: Conduct a comprehensive risk analysis on the provided logistics/supply chain image.
-
-ANALYSIS FRAMEWORK:
-Evaluate the following dimensions in your analysis:
-1. Operational Risk: Equipment condition, handling procedures, environmental factors
-2. Safety Risk: Worker safety, hazmat compliance, containment measures
-3. Efficiency Risk: Process delays, bottlenecks, workflow optimization potential
-4. Regulatory Risk: Compliance with logistics standards and regulations
-5. Environmental Impact: Carbon footprint, emissions, sustainability concerns
+TASK: Analyze the provided image and calculate environmental impact metrics.
 
 REQUIRED OUTPUT - Return ONLY a valid JSON object with these exact keys:
 {
-  "riskDegree": <integer from 1-10, where 1=minimal risk, 10=critical risk>,
-  "carbonEmission": <number representing estimated kg of CO2 emissions>,
-  "cost": <number representing estimated financial impact in USD>,
-  "reasoning": <string with detailed professional analysis (2-3 sentences minimum)>
+  "fullyChargingPhones": <number of smartphones>,
+  "lightHours": <hours of traditional light bulb usage equivalent>,
+  "ledLighting": <hours of LED lighting equivalent>,
+  "drivingCar": <kilometers of car driving equivalent>,
+  "CO2Emission": <kg of CO2 emissions>,
+  "cleanWater": <liters of clean water impact>,
+  "soilDegradation": <square meters of soil degradation>,
+  "contaminatingGroundwater": <liters of groundwater contamination>,
+  "energyConsumptionOfSmallWorkshop": <hours of workshop energy>,
+  "lossRareEarthElements": <kilograms of rare earth elements>,
+  "microplasticPollutionMarineLife": <grams of microplastics>,
+  "annualCarbonSequestrationCapacityTree": <years of tree sequestration>,
+  "householdElectricityConsumption": <hours of household electricity>,
+  "dailyWaterConsumptionPeople": <liters of daily water consumption>,
+  "humanCarbonFootprintOneDay": <days of human carbon footprint>,
+  "riskDegree": <integer from 1-10>,
+  "cost": <estimated financial impact in USD>
 }
-
-REASONING GUIDELINES:
-- Provide specific observations from the image
-- Explain the connection between identified issues and risk metrics
-- Suggest one improvement recommendation if applicable
-- Use professional logistics terminology
 
 CRITICAL REQUIREMENTS:
 - Return ONLY valid JSON, no markdown formatting or code blocks
-- Do not wrap response in \`\`\`json or similar markers
-- Ensure all numeric values are reasonable and evidence-based
+- All numeric values must be evidence-based and realistic
 - All keys must be present in the response`;
     }
 
@@ -83,19 +81,45 @@ CRITICAL REQUIREMENTS:
             // const response = await result.response;
             // const text = response.text();
             const text = `{
+  "fullyChargingPhones": 125,
+  "lightHours": 45.5,
+  "ledLighting": 90,
+  "drivingCar": 250,
+  "CO2Emission": 1250.5,
+  "cleanWater": 500,
+  "soilDegradation": 150,
+  "contaminatingGroundwater": 300,
+  "energyConsumptionOfSmallWorkshop": 35,
+  "lossRareEarthElements": 8.5,
+  "microplasticPollutionMarineLife": 42,
+  "annualCarbonSequestrationCapacityTree": 3,
+  "householdElectricityConsumption": 24,
+  "dailyWaterConsumptionPeople": 180,
+  "humanCarbonFootprintOneDay": 0.5,
   "riskDegree": 7,
-  "carbonEmission": 1250.5,
-  "cost": 45000,
-  "reasoning": "The image indicates suboptimal handling procedures and equipment conditions that elevate operational risks. Worker safety measures appear insufficient, increasing the likelihood of accidents. Additionally, inefficiencies in the workflow suggest potential delays, contributing to higher carbon emissions and financial costs."
+  "cost": 45000
 }`;
 
             const analysisData = JSON.parse(text);
 
             return {
+                fullyChargingPhones: analysisData.fullyChargingPhones,
+                lightHours: analysisData.lightHours,
+                ledLighting: analysisData.ledLighting,
+                drivingCar: analysisData.drivingCar,
+                CO2Emission: analysisData.CO2Emission,
+                cleanWater: analysisData.cleanWater,
+                soilDegradation: analysisData.soilDegradation,
+                contaminatingGroundwater: analysisData.contaminatingGroundwater,
+                energyConsumptionOfSmallWorkshop: analysisData.energyConsumptionOfSmallWorkshop,
+                lossRareEarthElements: analysisData.lossRareEarthElements,
+                microplasticPollutionMarineLife: analysisData.microplasticPollutionMarineLife,
+                annualCarbonSequestrationCapacityTree: analysisData.annualCarbonSequestrationCapacityTree,
+                householdElectricityConsumption: analysisData.householdElectricityConsumption,
+                dailyWaterConsumptionPeople: analysisData.dailyWaterConsumptionPeople,
+                humanCarbonFootprintOneDay: analysisData.humanCarbonFootprintOneDay,
                 riskDegree: analysisData.riskDegree,
-                carbonEmission: analysisData.carbonEmission,
-                cost: analysisData.cost,
-                reasoning: analysisData.reasoning
+                cost: analysisData.cost
             };
         } catch (error) {
             console.error('Gemini API Hatası:', error);

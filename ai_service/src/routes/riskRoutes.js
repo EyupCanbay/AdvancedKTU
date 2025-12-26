@@ -11,11 +11,11 @@ const router = express.Router();
 
 /**
  * POST /risk-degree
- * Analyze image and assess risk degree
+ * Analyze image and assess environmental impact metrics
  * 
  * Request body:
  * {
- *   "id": number (optional),
+ *   "id": string (required),
  *   "path": string (required) - Path to image file
  * }
  * 
@@ -23,10 +23,23 @@ const router = express.Router();
  * {
  *   "success": boolean,
  *   "data": {
- *     "riskDegree": number,
- *     "carbonEmission": number,
- *     "cost": number,
- *     "reasoning": string
+ *     "fullyChargingPhones": number (count),
+ *     "lightHours": number (hours),
+ *     "ledLighting": number (hours),
+ *     "drivingCar": number (km),
+ *     "CO2Emission": number (kg),
+ *     "cleanWater": number (liters),
+ *     "soilDegradation": number (square meters),
+ *     "contaminatingGroundwater": number (liters),
+ *     "energyConsumptionOfSmallWorkshop": number (hours),
+ *     "lossRareEarthElements": number (kilograms),
+ *     "microplasticPollutionMarineLife": number (grams),
+ *     "annualCarbonSequestrationCapacityTree": number (years),
+ *     "householdElectricityConsumption": number (hours),
+ *     "dailyWaterConsumptionPeople": number (liters),
+ *     "humanCarbonFootprintOneDay": number (days),
+ *     "riskDegree": integer (1-10),
+ *     "cost": number (USD)
  *   }
  * }
  */
