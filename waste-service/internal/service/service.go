@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings" // URL birleştirme için eklendi
 	"time"
 	"waste-service/internal/domain"
 
@@ -22,28 +23,24 @@ type wasteService struct {
 }
 
 func NewWasteService(repo domain.WasteRepository, aiURL string) domain.WasteService {
-	return &wasteService{repo: repo, aiURL: aiURL}
+	cleanURL := strings.TrimRight(aiURL, "/")
+	return &wasteService{repo: repo, aiURL: cleanURL}
 }
+
 func (s *wasteService) UploadAndAnalyze(ctx context.Context, userID string, fileHeader interface{}, description string) (*domain.Waste, error) {
 	fh := fileHeader.(*multipart.FileHeader)
 
-	// --- BURAYI GÜNCELLE ---
-
-	// 1. Çalışma dizinini al (Debug için)
 	wd, _ := os.Getwd()
 	fmt.Println("Çalışma Dizini:", wd)
 
-	// 2. Klasörü Garantiye Al
-	uploadDir := "C:/Users/canbay/Desktop/advancedKtu/waste-service/uploads" // Sadece "uploads" olsun, başına proje adı koyma
+	uploadDir := "C:/Users/canbay/Desktop/advancedKtu/waste-service/uploads"
 	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
 		return nil, fmt.Errorf("klasör oluşturulamadı: %v", err)
 	}
 
-	// 3. Dosya Yolunu Oluştur
 	filename := fmt.Sprintf("%d_%s", time.Now().Unix(), fh.Filename)
 	fullPath := filepath.Join(uploadDir, filename)
 
-	// 4. Dosyayı Aç ve Kopyala
 	src, err := fh.Open()
 	if err != nil {
 		return nil, err
@@ -60,62 +57,68 @@ func (s *wasteService) UploadAndAnalyze(ctx context.Context, userID string, file
 		return nil, err
 	}
 
-	// 2. WASTE OBJESİNİ HAZIRLA
 	waste := &domain.Waste{
 		UserID:      userID,
 		ImagePath:   fullPath,
 		Description: description,
-		Status:      "analyzing", // Önce analiz ediliyor diyoruz
+		Status:      "analyzing",
 	}
 
-	// 3. AI SERVİSİNE İSTEK AT VE BEKLE (SENKRON)
-	// Kullanıcı loading ekranında bekleyecek ama sonuçla dönecek.
 	analysis, err := s.callAIService(fullPath, description)
 
 	if err == nil {
-		// AI Başarılıysa sonucu ekle
 		waste.AIAnalysis = analysis
 		waste.Status = "analyzed"
 	} else {
-		// AI Hata verdiyse bile kaydı oluştur ama status farklı olsun
 		fmt.Printf("AI Hatası: %v\n", err)
 		waste.Status = "analysis_failed"
 	}
 
-	// 4. VERİTABANINA KAYDET (AI Sonucuyla birlikte)
 	if err := s.repo.Create(ctx, waste); err != nil {
 		return nil, err
 	}
 
-	// 5. CLIENT'A FULL OBJEYİ DÖN
 	return waste, nil
 }
 
-// AI İsteğini atan fonksiyon (Description eklendi)
 func (s *wasteService) callAIService(imagePath, description string) (*domain.AIAnalysisResult, error) {
-	// AI Servisi bizden ne bekliyorsa onu gönderiyoruz
+
 	payload := map[string]string{
-		"image_path":  imagePath,   // Resmin yolu
-		"description": description, // Kullanıcının girdiği açıklama
+		"image_path":  imagePath,
+		"description": description,
 	}
 	jsonPayload, _ := json.Marshal(payload)
 
-	// AI Servisine POST isteği
-	resp, err := http.Post(s.aiURL, "application/json", bytes.NewBuffer(jsonPayload))
+	targetURL := fmt.Sprintf("%s", s.aiURL)
+
+	fmt.Println("📡 AI İsteği Gönderiliyor:", targetURL)
+
+	resp, err := http.Post(targetURL, "application/json", bytes.NewBuffer(jsonPayload))
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("AI servisi hata döndü: %d", resp.StatusCode)
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("AI servisi hata döndü (%d): %s", resp.StatusCode, string(bodyBytes))
 	}
 
-	var result domain.AIAnalysisResult
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, err
+	type AIResponseWrapper struct {
+		Success bool                    `json:"success"`
+		Data    domain.AIAnalysisResult `json:"data"`
 	}
-	return &result, nil
+
+	var wrapper AIResponseWrapper
+	if err := json.NewDecoder(resp.Body).Decode(&wrapper); err != nil {
+		return nil, fmt.Errorf("JSON decode hatası: %v", err)
+	}
+
+	if !wrapper.Success {
+		return nil, fmt.Errorf("AI servisi success:false döndü")
+	}
+
+	return &wrapper.Data, nil
 }
 
 func (s *wasteService) GetCollectionPoints(ctx context.Context) ([]*domain.CollectionPoint, error) {
