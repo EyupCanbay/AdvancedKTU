@@ -12,10 +12,9 @@ import (
 
 type authService struct {
 	repo      domain.UserRepository
-	jwtSecret string // Secret'ı buraya enjekte edeceğiz
+	jwtSecret string
 }
 
-// Constructor'a secret parametresi eklendi
 func NewAuthService(repo domain.UserRepository, secret string) domain.AuthService {
 	return &authService{
 		repo:      repo,
@@ -38,7 +37,6 @@ func (s *authService) Login(ctx context.Context, email, password string) (string
 		return "", nil, errors.New("invalid credentials")
 	}
 
-	// JWT Oluşturma Aşaması
 	token, err := s.generateToken(user)
 	if err != nil {
 		return "", nil, errors.New("error generating token")
@@ -48,6 +46,12 @@ func (s *authService) Login(ctx context.Context, email, password string) (string
 }
 
 func (s *authService) Register(ctx context.Context, user *domain.User) error {
+	// 1. Validasyon: Adres Kontrolü
+	if len(user.Addresses) == 0 {
+		return errors.New("at least one address is required")
+	}
+
+	// 2. Validasyon: Email Kontrolü
 	existing, _ := s.repo.GetByEmail(ctx, user.Email)
 	if existing != nil {
 		return errors.New("email already in use")
@@ -63,12 +67,11 @@ func (s *authService) Register(ctx context.Context, user *domain.User) error {
 	return s.repo.Create(ctx, user)
 }
 
-// Helper: Token üretme fonksiyonu (private)
 func (s *authService) generateToken(user *domain.User) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": user.ID.Hex(),
 		"email":   user.Email,
-		"exp":     time.Now().Add(time.Hour * 72).Unix(), // 72 saat geçerli
+		"exp":     time.Now().Add(time.Hour * 72).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

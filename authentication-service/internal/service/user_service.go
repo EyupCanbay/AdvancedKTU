@@ -27,6 +27,11 @@ func (s *userService) GetAll(ctx context.Context) ([]*domain.User, error) {
 }
 
 func (s *userService) Create(ctx context.Context, user *domain.User) error {
+	// Admin manuel ekleme yaparken de adres zorunlu
+	if len(user.Addresses) == 0 {
+		return errors.New("at least one address is required")
+	}
+
 	existing, _ := s.repo.GetByEmail(ctx, user.Email)
 	if existing != nil {
 		return errors.New("email already exists")
@@ -54,6 +59,15 @@ func (s *userService) Update(ctx context.Context, id string, user *domain.User) 
 	existing.LastName = user.LastName
 	existing.Email = user.Email
 	existing.Active = user.Active
+
+	// Eğer güncelleme isteğinde adres gönderilmişse güncelle, boşsa eskisini koru veya hata fırlat
+	// Senaryo: Adres listesi tamamen değiştirilmek isteniyor olabilir.
+	if len(user.Addresses) > 0 {
+		existing.Addresses = user.Addresses
+	}
+	// Not: Eğer kullanıcı adreslerini tamamen silmeye çalışırsa (boş array yollarsa)
+	// yukarıdaki if bloğu çalışmaz ve eski adresler kalır. 
+	// Eğer silmeye izin verilmeyecekse bu mantık doğrudur (En az 1 adres kuralı).
 
 	if user.Password != "" {
 		hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)

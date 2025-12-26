@@ -17,17 +17,18 @@ func NewAuthHandler(service domain.AuthService) *AuthHandler {
 	}
 }
 
-// Swagger'ın görmesi için struct isimleri büyük harfle başlamalı
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
+// RegisterRequest güncellendi: Adres listesi eklendi
 type RegisterRequest struct {
-	Email     string `json:"email"`
-	Password  string `json:"password"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	Email     string           `json:"email"`
+	Password  string           `json:"password"`
+	FirstName string           `json:"first_name"`
+	LastName  string           `json:"last_name"`
+	Addresses []domain.Address `json:"addresses"` // Zorunlu alan
 }
 
 type LoginResponse struct {
@@ -73,12 +74,12 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 // Register godoc
 // @Summary Yeni Kullanıcı Kaydı
-// @Description Sisteme yeni bir kullanıcı ekler.
+// @Description Sisteme yeni bir kullanıcı ekler. En az bir adres girilmesi zorunludur.
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param request body RegisterRequest true "Kayıt Bilgileri"
-// @Success 210 {object} map[string]string
+// @Param request body RegisterRequest true "Kayıt Bilgileri (Adres Dahil)"
+// @Success 201 {object} map[string]string
 // @Failure 400 {object} map[string]string
 // @Router /auth/register [post]
 func (h *AuthHandler) Register(c echo.Context) error {
@@ -87,11 +88,17 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
 	}
 
+	// Handler seviyesinde basit validasyon (Business logic'te de tekrar kontrol edilecek)
+	if len(req.Addresses) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "at least one address is required"})
+	}
+
 	user := &domain.User{
 		Email:     req.Email,
 		Password:  req.Password,
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
+		Addresses: req.Addresses, // Adresleri map ediyoruz
 	}
 
 	if err := h.service.Register(c.Request().Context(), user); err != nil {

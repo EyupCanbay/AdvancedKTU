@@ -1,9 +1,28 @@
 basePath: /
 definitions:
+  domain.Address:
+    properties:
+      city:
+        example: Istanbul
+        type: string
+      district:
+        example: Kadikoy
+        type: string
+      full_address:
+        example: Caferaga mah. Moda cad. No:1
+        type: string
+      title:
+        example: Ev
+        type: string
+    type: object
   domain.User:
     properties:
       active:
         type: boolean
+      addresses:
+        items:
+          $ref: '#/definitions/domain.Address'
+        type: array
       created_at:
         type: string
       email:
@@ -35,6 +54,11 @@ definitions:
     type: object
   http.RegisterRequest:
     properties:
+      addresses:
+        description: Zorunlu alan
+        items:
+          $ref: '#/definitions/domain.Address'
+        type: array
       email:
         type: string
       first_name:
@@ -96,9 +120,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Sisteme yeni bir kullanıcı ekler.
+      description: Sisteme yeni bir kullanıcı ekler. En az bir adres girilmesi zorunludur.
       parameters:
-      - description: Kayıt Bilgileri
+      - description: Kayıt Bilgileri (Adres Dahil)
         in: body
         name: request
         required: true
@@ -107,8 +131,8 @@ paths:
       produces:
       - application/json
       responses:
-        "210":
-          description: ""
+        "201":
+          description: Created
           schema:
             additionalProperties:
               type: string
@@ -141,7 +165,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Veritabanındaki tüm kullanıcıları listeler.
+      description: Veritabanındaki tüm kullanıcıları adresleriyle birlikte listeler.
       produces:
       - application/json
       responses:
@@ -165,9 +189,9 @@ paths:
     post:
       consumes:
       - application/json
-      description: Doğrudan bir user objesi oluşturur.
+      description: Doğrudan bir user objesi oluşturur. Adres listesi zorunludur.
       parameters:
-      - description: User Object
+      - description: User Object (With Addresses)
         in: body
         name: request
         required: true
@@ -219,7 +243,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Verilen ID'ye sahip kullanıcıyı döner.
+      description: Verilen ID'ye sahip kullanıcıyı ve adreslerini döner.
       parameters:
       - description: User ID
         in: path

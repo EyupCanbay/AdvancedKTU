@@ -78,7 +78,7 @@ const docTemplate = `{
         },
         "/auth/register": {
             "post": {
-                "description": "Sisteme yeni bir kullanıcı ekler.",
+                "description": "Sisteme yeni bir kullanıcı ekler. En az bir adres girilmesi zorunludur.",
                 "consumes": [
                     "application/json"
                 ],
@@ -91,7 +91,7 @@ const docTemplate = `{
                 "summary": "Yeni Kullanıcı Kaydı",
                 "parameters": [
                     {
-                        "description": "Kayıt Bilgileri",
+                        "description": "Kayıt Bilgileri (Adres Dahil)",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -101,8 +101,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "210": {
-                        "description": "",
+                    "201": {
+                        "description": "Created",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -152,7 +152,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Veritabanındaki tüm kullanıcıları listeler.",
+                "description": "Veritabanındaki tüm kullanıcıları adresleriyle birlikte listeler.",
                 "consumes": [
                     "application/json"
                 ],
@@ -190,7 +190,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Doğrudan bir user objesi oluşturur.",
+                "description": "Doğrudan bir user objesi oluşturur. Adres listesi zorunludur.",
                 "consumes": [
                     "application/json"
                 ],
@@ -203,7 +203,7 @@ const docTemplate = `{
                 "summary": "Admin Tarafından Kullanıcı Ekle",
                 "parameters": [
                     {
-                        "description": "User Object",
+                        "description": "User Object (With Addresses)",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -238,7 +238,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Verilen ID'ye sahip kullanıcıyı döner.",
+                "description": "Verilen ID'ye sahip kullanıcıyı ve adreslerini döner.",
                 "consumes": [
                     "application/json"
                 ],
@@ -373,11 +373,38 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "domain.Address": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string",
+                    "example": "Istanbul"
+                },
+                "district": {
+                    "type": "string",
+                    "example": "Kadikoy"
+                },
+                "full_address": {
+                    "type": "string",
+                    "example": "Caferaga mah. Moda cad. No:1"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Ev"
+                }
+            }
+        },
         "domain.User": {
             "type": "object",
             "properties": {
                 "active": {
                     "type": "boolean"
+                },
+                "addresses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Address"
+                    }
                 },
                 "created_at": {
                     "type": "string"
@@ -427,6 +454,13 @@ const docTemplate = `{
         "http.RegisterRequest": {
             "type": "object",
             "properties": {
+                "addresses": {
+                    "description": "Zorunlu alan",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Address"
+                    }
+                },
                 "email": {
                     "type": "string"
                 },

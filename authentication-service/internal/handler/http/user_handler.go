@@ -17,15 +17,13 @@ func NewUserHandler(service domain.UserService) *UserHandler {
 	}
 }
 
-// RegisterRoutes metodunu main.go içinde manuel yönettiğin için burası sadece referans kalabilir
-// Ancak dokümantasyon handler fonksiyonları üzerindeki yorumlardan okunur.
 func (h *UserHandler) RegisterRoutes(e *echo.Echo) {
-	// Bu kısım main.go içerisinde group ile yönetiliyor
+	// Rotalar main.go'da group ile yönetiliyor
 }
 
 // GetAll godoc
 // @Summary Tüm Kullanıcıları Getir
-// @Description Veritabanındaki tüm kullanıcıları listeler.
+// @Description Veritabanındaki tüm kullanıcıları adresleriyle birlikte listeler.
 // @Tags Users
 // @Accept json
 // @Produce json
@@ -43,7 +41,7 @@ func (h *UserHandler) GetAll(c echo.Context) error {
 
 // GetByID godoc
 // @Summary ID ile Kullanıcı Getir
-// @Description Verilen ID'ye sahip kullanıcıyı döner.
+// @Description Verilen ID'ye sahip kullanıcıyı ve adreslerini döner.
 // @Tags Users
 // @Accept json
 // @Produce json
@@ -63,12 +61,12 @@ func (h *UserHandler) GetByID(c echo.Context) error {
 
 // Create godoc
 // @Summary Admin Tarafından Kullanıcı Ekle
-// @Description Doğrudan bir user objesi oluşturur.
+// @Description Doğrudan bir user objesi oluşturur. Adres listesi zorunludur.
 // @Tags Users
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body domain.User true "User Object"
+// @Param request body domain.User true "User Object (With Addresses)"
 // @Success 201 {object} domain.User
 // @Failure 400 {object} map[string]string
 // @Router /users [post]
