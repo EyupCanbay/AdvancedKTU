@@ -1,94 +1,89 @@
 package main
 
 import (
-	"authentication-service/internal/config"
-	handler "authentication-service/internal/handler/http"
-	customMiddleware "authentication-service/internal/handler/middleware"
-	"authentication-service/internal/repository"
-	"authentication-service/internal/service"
-	"context"
-	"log"
-	"time"
+    "authentication-service/internal/config"
+    handler "authentication-service/internal/handler/http"
+    customMiddleware "authentication-service/internal/handler/middleware"
+    "authentication-service/internal/repository"
+    "authentication-service/internal/service"
+    "context"
+    "log"
+    "net/http" // HTTP metodları için (http.MethodGet vs.) bunu eklemeyi unutma
+    "time"
 
-	"github.com/labstack/echo/v4"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+    "github.com/labstack/echo/v4"
+    "github.com/labstack/echo/v4/middleware" // <--- 1. BU IMPORT'U EKLE
+    "go.mongodb.org/mongo-driver/mongo"
+    "go.mongodb.org/mongo-driver/mongo/options"
 
-	// Swagger dependencies
-	_ "authentication-service/docs" // Bu satır swag init yapınca oluşan docs paketini import eder
-
-	echoSwagger "github.com/swaggo/echo-swagger"
+    _ "authentication-service/docs"
+    echoSwagger "github.com/swaggo/echo-swagger"
 )
 
-// @title Authentication Service API
-// @version 1.0
-// @description Go, Echo ve MongoDB kullanılan örnek bir authentication servisi.
-// @termsOfService http://swagger.io/terms/
+// ... (Swagger yorumların aynı kalacak) ...
 
-// @contact.name API Support
-// @contact.url http://www.swagger.io/support
-// @contact.email support@swagger.io
-
-// @license.name Apache 2.0
-// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
-
-// @host localhost:8080
-// @BasePath /
-
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
 func main() {
-	cfg := config.LoadConfig()
+    cfg := config.LoadConfig()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
 
-	// 1. Database Bağlantısı
-	clientOptions := options.Client().ApplyURI(cfg.MongoURI)
-	client, err := mongo.Connect(ctx, clientOptions)
-	if err != nil {
-		log.Fatalf("Failed to connect to MongoDB: %v", err)
-	}
+    // ... (Database bağlantıları aynı) ...
+    clientOptions := options.Client().ApplyURI(cfg.MongoURI)
+    client, err := mongo.Connect(ctx, clientOptions)
+    if err != nil {
+        log.Fatalf("Failed to connect to MongoDB: %v", err)
+    }
 
-	err = client.Ping(ctx, nil)
-	if err != nil {
-		log.Fatalf("MongoDB not reachable: %v", err)
-	}
-	db := client.Database(cfg.DbName)
+    err = client.Ping(ctx, nil)
+    if err != nil {
+        log.Fatalf("MongoDB not reachable: %v", err)
+    }
+    db := client.Database(cfg.DbName)
 
-	// 2. Repository Başlatma
-	userRepo := repository.NewMongoRepository(db)
+    userRepo := repository.NewMongoRepository(db)
+    authService := service.NewAuthService(userRepo, cfg.JWTSecret)
+    userService := service.NewUserService(userRepo)
+    
+    // AuthHandler düzeltmesi: Önceki hatanı hatırlayarak, buraya config'i eklemen gerekebilir.
+    // Eğer NewAuthHandler fonksiyonunu düzelttiysen şöyle olmalı:
+    // authHandler := handler.NewAuthHandler(authService, cfg) 
+    // Ama şimdilik senin attığın koda sadık kalıyorum:
+    authHandler := handler.NewAuthHandler(authService)
+    
+    userHandler := handler.NewUserHandler(userService)
 
-	// 3. Service Başlatma
-	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
-	userService := service.NewUserService(userRepo)
+    // 5. Echo Server Kurulumu
+    e := echo.New()
 
-	// 4. Handler Başlatma
-	authHandler := handler.NewAuthHandler(authService)
-	userHandler := handler.NewUserHandler(userService)
+    // ==========================================
+    // 2. CORS AYARLARI BURAYA (En üste ekle)
+    // ==========================================
+    e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+        AllowOrigins: []string{"*"}, // Geliştirme aşamasında "*" (herkes) iyidir. Prod'da "https://site.com" yaparsın.
+        AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete, http.MethodOptions},
+        AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+    }))
+    
+    // Logger ve Recover middleware'lerini de eklemek iyi pratiktir:
+    e.Use(middleware.Logger())
+    e.Use(middleware.Recover())
 
-	// 5. Echo Server Kurulumu
-	e := echo.New()
+    // SWAGGER ROUTE
+    e.GET("/swagger/*", echoSwagger.WrapHandler)
 
-	// SWAGGER ROUTE
-	e.GET("/swagger/*", echoSwagger.WrapHandler)
+    // ... (Rota tanımları aynı) ...
+    authHandler.RegisterRoutes(e)
 
-	// 6. Rota Tanımları
+    userGroup := e.Group("/users")
+    userGroup.Use(customMiddleware.JWTMiddleware(cfg.JWTSecret))
 
-	// HERKESE AÇIK ROTALAR (Public)
-	authHandler.RegisterRoutes(e)
+    userGroup.GET("", userHandler.GetAll)
+    userGroup.GET("/:id", userHandler.GetByID)
+    userGroup.POST("", userHandler.Create)
+    userGroup.PUT("/:id", userHandler.Update)
+    userGroup.DELETE("/:id", userHandler.Delete)
 
-	// KORUMALI ROTALAR (Protected)
-	userGroup := e.Group("/users")
-	userGroup.Use(customMiddleware.JWTMiddleware(cfg.JWTSecret))
-
-	userGroup.GET("", userHandler.GetAll)
-	userGroup.GET("/:id", userHandler.GetByID)
-	userGroup.POST("", userHandler.Create)
-	userGroup.PUT("/:id", userHandler.Update)
-	userGroup.DELETE("/:id", userHandler.Delete)
-
-	log.Printf("Server running on port %s", cfg.Port)
-	e.Logger.Fatal(e.Start(":" + cfg.Port))
+    log.Printf("Server running on port %s", cfg.Port)
+    e.Logger.Fatal(e.Start(":" + cfg.Port))
 }
