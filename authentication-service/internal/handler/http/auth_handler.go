@@ -4,16 +4,22 @@ import (
 	"authentication-service/internal/domain"
 	"net/http"
 
+	cfg "authentication-service/internal/config"
+	customMiddleware "authentication-service/internal/handler/middleware"
+
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
 type AuthHandler struct {
 	service domain.AuthService
+	config  *cfg.Config
 }
 
 func NewAuthHandler(service domain.AuthService) *AuthHandler {
 	return &AuthHandler{
 		service: service,
+		config:  cfg.LoadConfig(),
 	}
 }
 
@@ -41,6 +47,7 @@ func (h *AuthHandler) RegisterRoutes(e *echo.Echo) {
 	e.POST("/auth/login", h.Login)
 	e.POST("/auth/register", h.Register)
 	e.GET("/health", h.HealthCheck)
+	e.GET("/auth/validate", h.ValidateToken, customMiddleware.JWTMiddleware(h.config.JWTSecret))
 }
 
 // Login godoc
@@ -117,4 +124,44 @@ func (h *AuthHandler) Register(c echo.Context) error {
 // @Router /health [get]
 func (h *AuthHandler) HealthCheck(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// ValidateToken godoc
+// @Summary Token Doğrulama
+// @Description Diğer mikroservislerin token kontrolü yapması için kullanılır.
+// @Tags Auth
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]string
+// @Router /auth/validate [get]
+func (h *AuthHandler) ValidateToken(c echo.Context) error {
+	// 1. Context'ten veriyi güvenli al
+	rawData := c.Get("user")
+
+	// Eğer middleware bunu set etmediyse nil gelir
+	if rawData == nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "token not found in context"})
+	}
+
+	// 2. Tipi güvenli şekilde dönüştür (Type Assertion)
+	user, ok := rawData.(*jwt.Token)
+	if !ok {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "invalid token format in context"})
+	}
+
+	claims, ok := user.Claims.(jwt.MapClaims)
+	if !ok || !user.Valid {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid token claims"})
+	}
+
+	// Güvenli şekilde userID'yi al (Burası da patlayabilir, kontrol edelim)
+	userID, ok := claims["user_id"].(string)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "user_id not found in token"})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"valid":   true,
+		"user_id": userID,
+	})
 }
