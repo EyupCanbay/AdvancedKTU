@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/layout/Navbar';
 import { ImpactDashboard } from '../features/home/components/ImpactDashboard';
 import { ImpactAwareness } from '../features/home/components/ImpactAwareness';
@@ -6,6 +7,7 @@ import { WasteSubmissionModal } from '../features/home/components/WasteSubmissio
 
 export default function Home() {
   const [isWasteModalOpen, setIsWasteModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleOpenWasteModal = () => {
     setIsWasteModalOpen(true);
@@ -13,6 +15,11 @@ export default function Home() {
 
   const handleCloseWasteModal = () => {
     setIsWasteModalOpen(false);
+  };
+
+  const handleWasteSubmit = () => {
+    setIsWasteModalOpen(false);
+    navigate('/map');
   };
 
   return (
@@ -23,7 +30,7 @@ export default function Home() {
         <ImpactAwareness />
       </main>
       {isWasteModalOpen && (
-        <WasteSubmissionModal onClose={handleCloseWasteModal} />
+        <WasteSubmissionModal onClose={handleCloseWasteModal} onSubmit={handleWasteSubmit} />
       )}
     </div>
   );

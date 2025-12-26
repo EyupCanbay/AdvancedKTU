@@ -2,10 +2,18 @@ import { useState } from 'react';
 
 interface WasteSubmissionModalProps {
   onClose: () => void;
+  onSubmit?: () => void;
 }
 
-export const WasteSubmissionModal = ({ onClose }: WasteSubmissionModalProps) => {
+export const WasteSubmissionModal = ({ onClose, onSubmit }: WasteSubmissionModalProps) => {
   const [isBatteryWarning, setIsBatteryWarning] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (onSubmit) {
+      onSubmit();
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
@@ -34,7 +42,7 @@ export const WasteSubmissionModal = ({ onClose }: WasteSubmissionModalProps) => 
           <div className="mb-10 text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#14aab8]/10 border border-[#14aab8]/20 text-[#14aab8] text-xs font-bold mb-4">
               <span className="material-symbols-outlined text-base">science</span>
-              AI DESTEKLİ ANALİZ
+              AI DESTEKLİ ANALİZhandleSubmit
             </div>
             <h2 className="font-display font-extrabold text-3xl text-white mb-3 tracking-tight">Atık Bildirim Paneli</h2>
             <p className="text-gray-400 text-sm max-w-md mx-auto">Eski cihazınızı yapay zeka ile analiz edin, geri dönüşüm değerini öğrenin.</p>
@@ -90,7 +98,7 @@ export const WasteSubmissionModal = ({ onClose }: WasteSubmissionModalProps) => 
             </div>
 
             {/* Gönder Butonu */}
-            <button className="w-full h-14 bg-[#14aab8] hover:bg-[#0e7c86] text-white font-display font-extrabold text-lg rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+            <button type="submit" className="w-full h-14 bg-[#14aab8] hover:bg-[#0e7c86] text-white font-display font-extrabold text-lg rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
               Atığı Analiz Et ve Bildir
               <span className="material-symbols-outlined">arrow_forward</span>
             </button>
