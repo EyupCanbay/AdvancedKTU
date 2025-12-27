@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 
+const origin = (uri: string) => `${location.protocol}//${location.hostname}${uri}`;
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
