@@ -44,9 +44,14 @@ export const SelectCenterPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [selectionMode, setSelectionMode] = useState<'center' | 'myLocation'>('center'); // Seçim modu
+  const [userDescription, setUserDescription] = useState(''); // Kullanıcı açıklaması
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null); // Kullanıcı konumu
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const wasteData = state?.stats || {};
-  const wasteID = state?.wasteID || ''; // Waste ID'yi state'den alıyoruz
+  const wasteID = state?.wasteID || '';
+  const multipleDeviceData = state?.data || {}; // Çoklu cihaz verileri
 
   // Backend'den merkezleri yükle
   useEffect(() => {
@@ -64,6 +69,30 @@ export const SelectCenterPage = () => {
     fetchCenters();
   }, []);
 
+  // Kullanıcı konumunu al
+  const handleGetMyLocation = () => {
+    setLocationLoading(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          setSelectionMode('myLocation');
+          setSelectedCenter(null);
+          setLocationLoading(false);
+        },
+        (error) => {
+          console.error('Konum alınamadı:', error);
+          alert('Konum bilgisi alınamadı. Lütfen tarayıcı izinlerini kontrol edin.');
+          setLocationLoading(false);
+        }
+      );
+    } else {
+      alert('Tarayıcınız GPS desteklemiyor.');
+      setLocationLoading(false);
+    }
+  };
+
   // Filtreleme
   const filteredCenters = centers.filter(center => {
     const matchesSearch = center.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -76,31 +105,65 @@ export const SelectCenterPage = () => {
   };
 
   const handleConfirmSelection = async () => {
-    if (!selectedCenter || !wasteID) {
-      alert('Lütfen bir merkez seçin ve waste ID\'nin geçerli olduğundan emin olun.');
-      return;
-    }
+    // Merkez seçimi modu
+    if (selectionMode === 'center') {
+      if (!selectedCenter || !wasteID) {
+        alert('Lütfen bir merkez seçin ve waste ID\'nin geçerli olduğundan emin olun.');
+        return;
+      }
 
-    setSubmitting(true);
-    try {
-      await createCollectionRequest(wasteID, selectedCenter.id);
-      
-      navigate('/', { 
-        state: { 
-          message: `${selectedCenter.name} merkezine teslimat talebiniz kaydedildi.` 
-        } 
-      });
-    } catch (error) {
-      console.error('Teslimat talebi oluşturulamadı:', error);
-      alert('Teslimat talebi oluşturulurken hata oluştu. Lütfen tekrar deneyin.');
-    } finally {
-      setSubmitting(false);
+      setSubmitting(true);
+      try {
+        await createCollectionRequest(wasteID, selectedCenter.id);
+        
+        navigate('/', { 
+          state: { 
+            message: `${selectedCenter.name} merkezine teslimat talebiniz kaydedildi.` 
+          } 
+        });
+      } catch (error) {
+        console.error('Teslimat talebi oluşturulamadı:', error);
+        alert('Teslimat talebi oluşturulurken hata oluştu. Lütfen tekrar deneyin.');
+      } finally {
+        setSubmitting(false);
+      }
+    } 
+    // Konumum (GPS) seçimi modu
+    else if (selectionMode === 'myLocation') {
+      if (!userLocation || !userDescription.trim() || !wasteID) {
+        alert('Lütfen konumunuzun alındığından ve açıklama yazıldığından emin olun.');
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        // GPS konumuna dayalı teslimat talebini oluştur
+        // Not: Backend'de bu işlem için yeni endpoint gerekebilir
+        await createCollectionRequest(wasteID, null, {
+          latitude: userLocation.lat,
+          longitude: userLocation.lng,
+          description: userDescription
+        });
+        
+        navigate('/', { 
+          state: { 
+            message: 'Konum tabanlı teslimat talebiniz kaydedildi. E-atık toplama ekibi sizinle iletişime geçecektir.' 
+          } 
+        });
+      } catch (error) {
+        console.error('Teslimat talebi oluşturulamadı:', error);
+        alert('Teslimat talebi oluşturulurken hata oluştu. Lütfen tekrar deneyin.');
+      } finally {
+        setSubmitting(false);
+      }
     }
   };
 
-  // Harita merkezi - seçili merkez varsa onun konumunu göster, yoksa Türkiye ortası
+  // Harita merkezi - seçili merkez varsa onun konumunu göster, yoksa kullanıcı konumu veya Türkiye ortası
   const mapCenter: [number, number] = selectedCenter 
     ? [selectedCenter.latitude, selectedCenter.longitude]
+    : userLocation
+    ? [userLocation.lat, userLocation.lng]
     : [40.995, 39.771]; // KTÜ koordinatları varsayılan
 
   return (
@@ -146,15 +209,52 @@ export const SelectCenterPage = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-surface-dark border border-border-dark text-white text-sm rounded-lg p-3.5 pl-10 outline-none focus:border-primary transition-colors"
+                  disabled={selectionMode === 'myLocation'}
                 />
               </div>
+              
+              {/* Konumum Butonu */}
+              <button
+                onClick={handleGetMyLocation}
+                disabled={locationLoading}
+                className={`w-full px-4 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${
+                  selectionMode === 'myLocation'
+                    ? 'bg-accent/20 border border-accent text-accent'
+                    : 'bg-primary/20 border border-primary text-primary hover:bg-primary/30'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">
+                  {locationLoading ? 'refresh' : 'location_on'}
+                </span>
+                {locationLoading ? 'Konum alınıyor...' : 'Konumum Kullan'}
+              </button>
+
+              {/* Description Textarea - Konumum Modu İçin */}
+              {selectionMode === 'myLocation' && (
+                <div className="pt-2 border-t border-border-dark">
+                  <label className="text-sm font-bold text-white mb-2 block">
+                    Cihazlarınız Hakkında Açıklama
+                  </label>
+                  <textarea
+                    value={userDescription}
+                    onChange={(e) => setUserDescription(e.target.value.slice(0, 1000))}
+                    placeholder="Örn: 3 adet eski telefon, 2 adet tablet, 1 eski laptop..."
+                    rows={3}
+                    className="w-full bg-surface-dark border border-border-dark text-white text-sm rounded-lg p-3 outline-none focus:border-accent transition-colors resize-none"
+                  />
+                  <p className="text-gray-500 text-xs mt-1">
+                    {userDescription.length} / 1000
+                  </p>
+                </div>
+              )}
               
               <div className="text-sm text-text-subtle">
                 {loading ? 'Yükleniyor...' : `${centers.length} merkez bulundu`}
               </div>
             </div>
 
-            {/* Merkez Listesi */}
+            {/* Merkez Listesi - Sadece merkez seçimi modunda göster */}
+            {selectionMode === 'center' && (
             <div className="flex flex-col gap-3">
               {loading ? (
                 <div className="text-center py-12 text-text-subtle">
@@ -177,6 +277,7 @@ export const SelectCenterPage = () => {
                 </div>
               )}
             </div>
+            )}
           </div>
         </aside>
 
@@ -195,6 +296,26 @@ export const SelectCenterPage = () => {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               <MapUpdater center={selectedCenter ? [selectedCenter.latitude, selectedCenter.longitude] : null} />
+              
+              {/* Kullanıcı konumu göster - Konumum modu aktif ise */}
+              {selectionMode === 'myLocation' && userLocation && (
+                <Marker 
+                  position={[userLocation.lat, userLocation.lng]}
+                  icon={L.icon({
+                    iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0iIzE0YWFiOCIgZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyYzAgNC40MSAzLjA1IDguMTQgNy4xNyA5LjQ4VjIyYzAgLjU1LjQ1IDEgMSAxaDEuOTdjLjU1IDAgMS0uNDUgMS0xdi0uNTJjNC4xMi0xLjM0IDcuMTctNS4wNyA3LjE3LTkuNDhjMC01LjUyLTQuNDgtMTAtMTAtMTB6bTAgMThjLTQuNDEgMC04LTMuNTktOC04czMuNTktOCA4LTggOCAzLjU5IDggOC0zLjU5IDgtOCA4eiIvPjwvc3ZnPg==',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32],
+                    popupAnchor: [0, -32]
+                  })}
+                >
+                  <Popup>
+                    <div className="text-sm">
+                      <strong className="block mb-1 text-accent">Konumunuz</strong>
+                      <span className="text-xs text-gray-600">Lat: {userLocation.lat.toFixed(4)}, Lng: {userLocation.lng.toFixed(4)}</span>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
               
               {/* Merkezleri haritada göster */}
               {centers.map(center => (
@@ -216,49 +337,123 @@ export const SelectCenterPage = () => {
             </MapContainer>
           </div>
 
-          {/* Alt Panel - Seçili Merkez Detayları ve Onay */}
-          {selectedCenter && (
+          {/* Alt Panel - Seçili Merkez Detayları veya Konum Doğrulama */}
+          {(selectedCenter || (selectionMode === 'myLocation' && userLocation)) && (
             <div className="glass-panel border-t border-border-dark p-6">
-              <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-                {/* Merkez Özeti */}
-                <div className="flex items-start gap-4 flex-grow">
-                  <div className="size-14 rounded-full bg-accent/20 flex items-center justify-center text-accent shrink-0">
-                    <span className="material-symbols-outlined text-2xl">apartment</span>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white">{selectedCenter.name}</h3>
-                    <p className="text-text-subtle text-sm">{selectedCenter.address}</p>
-                    <div className="flex gap-4 mt-2 text-sm">
-                      <span className="flex items-center gap-1 text-accent">
-                        <span className="material-symbols-outlined text-sm">near_me</span>
-                        Seçildi
-                      </span>
+              {selectionMode === 'center' && selectedCenter ? (
+                // Merkez seçimi modu
+                <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+                  {/* Merkez Özeti */}
+                  <div className="flex items-start gap-4 flex-grow">
+                    <div className="size-14 rounded-full bg-accent/20 flex items-center justify-center text-accent shrink-0">
+                      <span className="material-symbols-outlined text-2xl">apartment</span>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-white">{selectedCenter.name}</h3>
+                      <p className="text-text-subtle text-sm">{selectedCenter.address}</p>
+                      <div className="flex gap-4 mt-2 text-sm">
+                        <span className="flex items-center gap-1 text-accent">
+                          <span className="material-symbols-outlined text-sm">near_me</span>
+                          Seçildi
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Onay Butonu */}
-                <button
-                  onClick={handleConfirmSelection}
-                  disabled={submitting}
-                  className="group relative overflow-hidden rounded-xl bg-primary px-8 py-4 text-lg font-bold text-white shadow-[0_0_30px_-5px_rgba(20,170,184,0.4)] transition-all hover:scale-[1.02] shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                  <div className="relative flex items-center gap-2">
-                    {submitting ? (
-                      <>
-                        <span className="animate-spin">⏳</span>
-                        <span>Gönderiliyor...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Merkezi Seç ve Devam Et</span>
-                        <span className="material-symbols-outlined">check_circle</span>
-                      </>
-                    )}
+                  {/* Onay Butonu */}
+                  <button
+                    onClick={handleConfirmSelection}
+                    disabled={submitting}
+                    className="group relative overflow-hidden rounded-xl bg-primary px-8 py-4 text-lg font-bold text-white shadow-[0_0_30px_-5px_rgba(20,170,184,0.4)] transition-all hover:scale-[1.02] shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                    <div className="relative flex items-center gap-2">
+                      {submitting ? (
+                        <>
+                          <span className="animate-spin">⏳</span>
+                          <span>Gönderiliyor...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Merkezi Seç ve Devam Et</span>
+                          <span className="material-symbols-outlined">check_circle</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+                </div>
+              ) : (
+                // Konumum modu - Açıklama ve doğrulama
+                <div className="max-w-4xl mx-auto space-y-6">
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-2">Cihazlarınız Hakkında Açıklama</h3>
+                    <p className="text-text-subtle text-sm mb-4">
+                      Lütfen gönderilecek cihazlar hakkında ayrıntılı açıklama yazın ve harita üzerindeki konumunuzun doğru olduğunu teyit edin.
+                    </p>
+                    <textarea
+                      value={userDescription}
+                      onChange={(e) => setUserDescription(e.target.value)}
+                      placeholder="Örn: 3 adet eski telefon, 2 adet tablet, 1 eski laptop..."
+                      rows={4}
+                      className="w-full bg-surface-dark border border-border-dark text-white rounded-lg p-4 outline-none focus:border-primary transition-colors resize-none"
+                    />
+                    <p className="text-gray-400 text-xs mt-2">
+                      {userDescription.length} / 1000 karakter
+                    </p>
                   </div>
-                </button>
-              </div>
+
+                  {/* Konum Doğrulama */}
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-2">Konumunuz Haritada Gösteriliyor</h3>
+                    <p className="text-text-subtle text-sm mb-3">Burası doğru mu? Eğer evet ise devam edin.</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-surface-dark rounded-lg p-3 border border-border-dark">
+                        <p className="text-xs text-text-subtle mb-1">Enlem (Latitude)</p>
+                        <p className="text-white font-bold">{userLocation?.lat.toFixed(6)}</p>
+                      </div>
+                      <div className="bg-surface-dark rounded-lg p-3 border border-border-dark">
+                        <p className="text-xs text-text-subtle mb-1">Boylam (Longitude)</p>
+                        <p className="text-white font-bold">{userLocation?.lng.toFixed(6)}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Onay Butonları */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setSelectionMode('center');
+                        setUserDescription('');
+                        setUserLocation(null);
+                      }}
+                      className="flex-1 px-6 py-3 rounded-lg font-bold border border-primary text-primary hover:bg-primary/10 transition-all"
+                    >
+                      Geri Dön
+                    </button>
+                    <button
+                      onClick={handleConfirmSelection}
+                      disabled={submitting || !userDescription.trim()}
+                      className={`flex-1 px-6 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${
+                        userDescription.trim()
+                          ? 'bg-accent hover:bg-accent-dark text-background-dark shadow-glow'
+                          : 'bg-border-dark text-gray-600 cursor-not-allowed'
+                      }`}
+                    >
+                      {submitting ? (
+                        <>
+                          <span className="animate-spin material-symbols-outlined text-sm">sync</span>
+                          Gönderiliyor...
+                        </>
+                      ) : (
+                        <>
+                          <span>Onay ve Teslimat Talep Et</span>
+                          <span className="material-symbols-outlined">check_circle</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </main>
