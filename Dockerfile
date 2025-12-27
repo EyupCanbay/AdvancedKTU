@@ -95,7 +95,7 @@ WORKDIR /app/chatBot
 
 COPY chatBot/package*.json ./
 
-RUN npm ci --only=production
+RUN npm i
 
 COPY chatBot/ .
 
