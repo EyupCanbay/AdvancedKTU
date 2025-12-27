@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3001,
+    allowedHosts: ["advancedktu.site"],
     proxy: {
       '/auth': {
         target: 'http://localhost:8080',
