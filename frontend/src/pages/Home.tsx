@@ -4,6 +4,7 @@ import { FeatureCard } from '../features/home/components/FeatureCard';
 import { ImpactAwareness } from '../features/home/components/ImpactAwareness';
 import { ImpactDashboard } from '../features/home/components/ImpactDashboard';
 import { WasteSubmissionModal } from '../features/home/components/WasteSubmissionModal';
+import { ChatBot } from '../components/ChatBot';
 
 // --- SADECE BU SATIRI EKLEDİK (Dışarıdaki güncel hesaplayıcı) ---
 import { CO2Calculator } from '../features/home/components/CO2Calculator'; 
@@ -156,6 +157,9 @@ const Home = () => {
           />
         </div>
       )}
+
+      {/* CarboBot Chatbot */}
+      <ChatBot />
     </div>
   );
 };
