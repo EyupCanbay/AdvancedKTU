@@ -79,11 +79,20 @@ func main() {
 	publicGroup.GET("/impact-analysis", func(c echo.Context) error {
 		return h.GetImpactAnalysis(c)
 	})
+	// Upload endpoint'i public yap (oturum açmadan da kullanılabilir)
+	publicGroup.POST("/upload", h.Upload)
+	// Çoklu cihaz bildirimi endpoint'i de public (guest kullanıcılar da kullanabilir)
+	publicGroup.POST("/devices/multiple", h.SubmitMultipleDevices)
+	// Points endpoint'i AUTH GEREKTİRİR (harita için login zorunlu)
+	// publicGroup.GET("/points", h.GetPoints) // ❌ Bu satırı kaldırdık
 
 	// 6. Korumalı Rotalar (Auth gerektiren)
 	// Tüm /api rotaları Auth korumasında olacak
 	apiGroup := e.Group("/api")
 	apiGroup.Use(middleware.AuthGuard(cfg.AuthServiceURL))
+
+	// Harita noktaları için login gerekli
+	apiGroup.GET("/points", h.GetPoints)
 
 	h.RegisterRoutes(apiGroup)
 

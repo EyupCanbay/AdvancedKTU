@@ -153,6 +153,12 @@ func (s *wasteService) DeleteWaste(ctx context.Context, wasteID string) error {
 	return s.repo.DeleteWaste(ctx, objID)
 }
 
+// CreateWaste - Çoklu cihaz için waste oluştur (resim olmadan)
+func (s *wasteService) CreateWaste(ctx context.Context, waste *domain.Waste) error {
+	waste.CreatedAt = time.Now()
+	return s.repo.Create(ctx, waste)
+}
+
 func (s *wasteService) CreateCollectionRequest(ctx context.Context, userID, wasteID, pointID string) (*domain.CollectionRequest, error) {
 	wID, _ := primitive.ObjectIDFromHex(wasteID)
 	pID, _ := primitive.ObjectIDFromHex(pointID)

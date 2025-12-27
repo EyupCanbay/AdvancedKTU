@@ -49,9 +49,32 @@ export const SelectCenterPage = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null); // Kullanıcı konumu
   const [locationLoading, setLocationLoading] = useState(false);
 
+  // 🔒 Login kontrolü - Harita için oturum açma zorunlu
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      // Token yoksa kullanıcıyı uyar ve login sayfasına yönlendir
+      alert('🔒 Harita özelliğini kullanmak için lütfen giriş yapın.\n\nFotoğraf yükleme ve sonuçları görüntüleme herkes için açıktır, ancak toplama merkezi seçimi için oturum açmanız gerekmektedir.');
+      navigate('/login', { replace: true });
+      return;
+    }
+  }, [navigate]);
+
   const wasteData = state?.stats || {};
-  const wasteID = state?.wasteID || '';
   const multipleDeviceData = state?.data || {}; // Çoklu cihaz verileri
+  const submissionType = state?.submissionType || ''; // 'multiple' ise çoklu cihaz
+  
+  // wasteID'yi hem normal hem çoklu cihaz durumu için al
+  const wasteID = submissionType === 'multiple' 
+    ? (multipleDeviceData.id || '') 
+    : (state?.wasteID || '');
+  
+  console.log('🔍 [SelectCenter] Sayfa açıldı:', {
+    submissionType,
+    wasteID,
+    hasMultipleDeviceData: !!multipleDeviceData.id,
+    multipleDeviceData
+  });
 
   // Backend'den merkezleri yükle
   useEffect(() => {
@@ -59,6 +82,19 @@ export const SelectCenterPage = () => {
       try {
         const points = await getCollectionPoints();
         setCenters(points);
+
+        // Çoklu cihaz bildirimi ise ve konum varsa, merkezi kullanıcı konumuna ayarla
+        if (submissionType === 'multiple' && multipleDeviceData.latitude && multipleDeviceData.longitude) {
+          console.log('📍 [SelectCenter] Çoklu cihaz konumu merkez olarak ayarlanıyor:', {
+            lat: multipleDeviceData.latitude,
+            lng: multipleDeviceData.longitude
+          });
+          setUserLocation({
+            lat: multipleDeviceData.latitude,
+            lng: multipleDeviceData.longitude
+          });
+          setSelectionMode('myLocation');
+        }
       } catch (error) {
         console.error('Merkezler yüklenemedi:', error);
       } finally {
@@ -67,7 +103,7 @@ export const SelectCenterPage = () => {
     };
 
     fetchCenters();
-  }, []);
+  }, [submissionType, multipleDeviceData]);
 
   // Kullanıcı konumunu al
   const handleGetMyLocation = () => {
@@ -116,11 +152,11 @@ export const SelectCenterPage = () => {
       try {
         await createCollectionRequest(wasteID, selectedCenter.id);
         
-        navigate('/', { 
-          state: { 
-            message: `${selectedCenter.name} merkezine teslimat talebiniz kaydedildi.` 
-          } 
-        });
+        // ✅ Başarı mesajı göster
+        alert(`✅ İşlem Tamamlandı!\n\n${selectedCenter.name} merkezine teslimat talebiniz başarıyla kaydedildi.\n\nE-atık toplama ekibi en kısa sürede sizinle iletişime geçecektir.`);
+        
+        // Ana sayfaya yönlendir
+        navigate('/', { replace: true });
       } catch (error) {
         console.error('Teslimat talebi oluşturulamadı:', error);
         alert('Teslimat talebi oluşturulurken hata oluştu. Lütfen tekrar deneyin.');
@@ -130,8 +166,16 @@ export const SelectCenterPage = () => {
     } 
     // Konumum (GPS) seçimi modu
     else if (selectionMode === 'myLocation') {
-      if (!userLocation || !userDescription.trim() || !wasteID) {
-        alert('Lütfen konumunuzun alındığından ve açıklama yazıldığından emin olun.');
+      // Çoklu cihaz durumunda userDescription opsiyonel (zaten backend'de var)
+      const needsDescription = submissionType !== 'multiple';
+      
+      if (!userLocation || !wasteID) {
+        alert('Lütfen konumunuzun alındığından emin olun.');
+        return;
+      }
+      
+      if (needsDescription && !userDescription.trim()) {
+        alert('Lütfen açıklama yazın.');
         return;
       }
 
@@ -145,11 +189,11 @@ export const SelectCenterPage = () => {
           description: userDescription
         });
         
-        navigate('/', { 
-          state: { 
-            message: 'Konum tabanlı teslimat talebiniz kaydedildi. E-atık toplama ekibi sizinle iletişime geçecektir.' 
-          } 
-        });
+        // ✅ Başarı mesajı göster
+        alert('✅ İşlem Tamamlandı!\n\nKonum tabanlı teslimat talebiniz başarıyla kaydedildi.\n\nE-atık toplama ekibi konumunuza gelecek ve sizinle iletişime geçecektir.');
+        
+        // Ana sayfaya yönlendir
+        navigate('/', { replace: true });
       } catch (error) {
         console.error('Teslimat talebi oluşturulamadı:', error);
         alert('Teslimat talebi oluşturulurken hata oluştu. Lütfen tekrar deneyin.');

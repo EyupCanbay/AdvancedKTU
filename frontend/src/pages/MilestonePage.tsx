@@ -170,7 +170,17 @@ export const MilestonePage = () => {
         {/* Devam Et Butonu */}
         <div className="w-full py-6">
           <button 
-            onClick={() => navigate('/select-center', { state: { stats, wasteID } })}
+            onClick={() => {
+              // 🔒 Harita için login kontrolü
+              const token = localStorage.getItem('token');
+              if (!token) {
+                alert('🔒 Toplama merkezi seçmek için lütfen giriş yapın.\n\nSonuçlarınızı görmek serbest, ancak teslimat işlemi için oturum açmanız gerekmektedir.');
+                navigate('/login');
+                return;
+              }
+              // Token varsa harita sayfasına git
+              navigate('/select-center', { state: { stats, wasteID } });
+            }}
             className="group relative w-full overflow-hidden rounded-2xl bg-primary p-1 text-center font-bold text-white shadow-[0_0_30px_-5px_rgba(20,170,184,0.4)] transition-all hover:scale-[1.01]"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>

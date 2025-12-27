@@ -17,6 +17,10 @@ type Waste struct {
 	AIAnalysis  *AIAnalysisResult  `bson:"ai_analysis,omitempty" json:"ai_analysis"`
 	Status      string             `bson:"status" json:"status"` // analyzing, pending, collected
 	CreatedAt   time.Time          `bson:"created_at" json:"created_at"`
+	IsMultiple  bool               `bson:"is_multiple" json:"is_multiple"`                 // Çoklu cihaz mı?
+	Category    string             `bson:"category" json:"category"`                       // Cihaz kategorisi
+	Latitude    float64            `bson:"latitude,omitempty" json:"latitude,omitempty"`   // Kullanıcı konumu
+	Longitude   float64            `bson:"longitude,omitempty" json:"longitude,omitempty"` // Kullanıcı konumu
 }
 
 type AIAnalysisResult struct {
@@ -100,6 +104,7 @@ type WasteService interface {
 	GetWastes(ctx context.Context) ([]*Waste, error)
 	UpdateWasteStatus(ctx context.Context, wasteID, status string) error
 	DeleteWaste(ctx context.Context, wasteID string) error
+	CreateWaste(ctx context.Context, waste *Waste) error // Çoklu cihaz için waste oluştur
 
 	// --- YENİ EKLENEN METODLAR (NOKTA YÖNETİMİ) ---
 	CreatePoint(ctx context.Context, point *CollectionPoint) error

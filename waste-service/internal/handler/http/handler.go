@@ -17,20 +17,47 @@ func NewWasteHandler(service domain.WasteService) *WasteHandler {
 
 // 1. Dosya Yükleme Endpointi
 func (h *WasteHandler) Upload(c echo.Context) error {
-	// Middleware'den userID'yi al
-	userID := c.Get("userID").(string)
+	c.Logger().Info("📤 [Handler] Upload endpoint çağrıldı")
+
+	// Middleware'den userID'yi al (opsiyonel - oturum açmadan da çalışabilir)
+	userID, ok := c.Get("userID").(string)
+	if !ok || userID == "" {
+		// Oturum açılmamışsa guest user olarak işle
+		userID = "guest"
+		c.Logger().Info("👤 [Handler] Guest kullanıcı olarak devam ediliyor")
+	} else {
+		c.Logger().Info("✅ [Handler] UserID alındı: ", userID)
+	}
 
 	description := c.FormValue("description")
+	c.Logger().Info("📝 [Handler] Description: ", description)
+
 	file, err := c.FormFile("image")
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Resim yüklemek zorunludur"})
+		c.Logger().Error("❌ [Handler] FormFile hatası: ", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error":  "Resim yüklemek zorunludur",
+			"detail": err.Error(),
+		})
 	}
 
+	c.Logger().Info("📁 [Handler] Dosya alındı:", map[string]interface{}{
+		"filename": file.Filename,
+		"size":     file.Size,
+		"header":   file.Header,
+	})
+
+	c.Logger().Info("🔄 [Handler] Service.UploadAndAnalyze çağrılıyor...")
 	waste, err := h.service.UploadAndAnalyze(c.Request().Context(), userID, file, description)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		c.Logger().Error("💥 [Handler] UploadAndAnalyze hatası: ", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+			"phase": "upload_and_analyze",
+		})
 	}
 
+	c.Logger().Info("✅ [Handler] Upload başarılı, waste ID: ", waste.ID)
 	return c.JSON(http.StatusCreated, waste)
 }
 
@@ -172,10 +199,73 @@ func (h *WasteHandler) GetWastesDebug(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
+// 9. Çoklu Cihaz Bildirimi (3+ cihaz için açıklama tabanlı)
+type MultipleDevicesPayload struct {
+	Description    string  `json:"description"`
+	Latitude       float64 `json:"latitude"`
+	Longitude      float64 `json:"longitude"`
+	SubmissionDate string  `json:"submissionDate"`
+}
+
+func (h *WasteHandler) SubmitMultipleDevices(c echo.Context) error {
+	c.Logger().Info("📦 [Handler] SubmitMultipleDevices endpoint çağrıldı")
+
+	// Middleware'den userID'yi al (opsiyonel - oturum açmadan da çalışabilir)
+	userID, ok := c.Get("userID").(string)
+	if !ok || userID == "" {
+		// Oturum açılmamışsa guest user olarak işle
+		userID = "guest"
+		c.Logger().Info("👤 [Handler] Guest kullanıcı olarak devam ediliyor")
+	} else {
+		c.Logger().Info("✅ [Handler] UserID alındı: ", userID)
+	}
+
+	var payload MultipleDevicesPayload
+	if err := c.Bind(&payload); err != nil {
+		c.Logger().Error("❌ [Handler] Payload bind hatası: ", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error":  "Geçersiz veri formatı",
+			"detail": err.Error(),
+		})
+	}
+
+	c.Logger().Info("📝 [Handler] Çoklu cihaz açıklaması:", payload.Description)
+	c.Logger().Info("📍 [Handler] Konum:", map[string]interface{}{
+		"latitude":  payload.Latitude,
+		"longitude": payload.Longitude,
+	})
+
+	// Waste oluştur (image olmadan, sadece açıklama ve konum ile)
+	waste := &domain.Waste{
+		UserID:      userID,
+		Description: payload.Description,
+		Category:    "Çoklu Cihaz",
+		Status:      "pending",
+		ImagePath:   "",
+		IsMultiple:  true, // Çoklu cihaz olduğunu işaretle
+		Latitude:    payload.Latitude,
+		Longitude:   payload.Longitude,
+	}
+
+	// Service üzerinden kaydet
+	ctx := c.Request().Context()
+	if err := h.service.CreateWaste(ctx, waste); err != nil {
+		c.Logger().Error("💥 [Handler] Waste oluşturma hatası: ", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+	}
+
+	c.Logger().Info("✅ [Handler] Çoklu cihaz kaydı başarılı, waste ID: ", waste.ID)
+	return c.JSON(http.StatusCreated, waste)
+}
+
 // Rotaları Tanımla (GÜNCELLENDİ)
+// NOT: /upload ve /points artık main.go'da public olarak tanımlı (auth gerektirmiyor)
 func (h *WasteHandler) RegisterRoutes(e *echo.Group) {
-	e.POST("/upload", h.Upload)
-	e.GET("/points", h.GetPoints)
+	// e.POST("/upload", h.Upload)  // ❌ Bu satırı kaldırdık - main.go'da public
+	// e.GET("/points", h.GetPoints) // ❌ Bu satırı kaldırdık - main.go'da public
+
 	e.GET("/wastes", h.GetWastes)
 	e.GET("/wastes/debug", h.GetWastesDebug)    // Debug endpoint
 	e.PATCH("/wastes/:id", h.UpdateWasteStatus) // Atık durumunu güncelle
@@ -186,5 +276,5 @@ func (h *WasteHandler) RegisterRoutes(e *echo.Group) {
 	e.PUT("/points/:id", h.UpdatePoint)    // Nokta güncelle
 	e.DELETE("/points/:id", h.DeletePoint) // Nokta sil
 
-	// NOT: /impact-analysis main.go'da public olarak tanımlı
+	// NOT: /impact-analysis, /upload, /points main.go'da public olarak tanımlı
 }

@@ -23,11 +23,23 @@ export const WasteSubmissionModal = ({ onClose, onAnalysisComplete }: any) => {
 
   // Dosya seçildiğinde önizleme oluştur
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📸 [WasteSubmissionModal] handleFileChange tetiklendi');
     const file = e.target.files?.[0];
+    
     if (file) {
+      console.log('✅ [WasteSubmissionModal] Dosya seçildi:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: new Date(file.lastModified).toISOString()
+      });
+      
       setSelectedFile(file);
       const url = URL.createObjectURL(file); // Binary dosyadan geçici URL
       setPreviewUrl(url);
+      console.log('🖼️ [WasteSubmissionModal] Preview URL oluşturuldu:', url);
+    } else {
+      console.warn('⚠️ [WasteSubmissionModal] Dosya seçilmedi veya iptal edildi');
     }
   };
 
@@ -48,19 +60,48 @@ export const WasteSubmissionModal = ({ onClose, onAnalysisComplete }: any) => {
   };
 
   const handleSubmit = async () => {
-    if (!selectedFile) return;
+    console.log('🚀 [WasteSubmissionModal] handleSubmit başladı');
+    
+    if (!selectedFile) {
+      console.error('❌ [WasteSubmissionModal] Dosya seçilmemiş!');
+      alert('Lütfen önce bir fotoğraf seçin!');
+      return;
+    }
+
+    console.log('📤 [WasteSubmissionModal] Dosya gönderiliyor:', {
+      name: selectedFile.name,
+      size: selectedFile.size,
+      type: selectedFile.type
+    });
+
     setLoading(true);
+    setLoadingStep(0);
+
+    // Simüle edilmiş adım ilerlemesi
+    const stepInterval = setInterval(() => {
+      setLoadingStep((prev) => {
+        if (prev < steps.length - 1) return prev + 1;
+        clearInterval(stepInterval);
+        return prev;
+      });
+    }, 1500);
 
     try {
+      console.log('📡 [WasteSubmissionModal] API çağrısı yapılıyor...');
       const response = await analyzeWasteImage(selectedFile); 
-      // Backend'den dönen 'response' bir Waste objesidir.
+      console.log('✅ [WasteSubmissionModal] API yanıtı alındı:', response);
       
+      clearInterval(stepInterval);
+      
+      // Backend'den dönen 'response' bir Waste objesidir.
       if (response && response.ai_analysis) { 
+        console.log('🎉 [WasteSubmissionModal] AI analizi başarılı:', response.ai_analysis);
         setSuccess(true);
         // SADECE analiz kısmını gönderiyoruz
         onAnalysisComplete(response.ai_analysis); 
 
         setTimeout(() => {
+          console.log('🗺️ [WasteSubmissionModal] Milestone sayfasına yönlendiriliyor...');
           // Milestone sayfasına stats ve wasteID gönderiyoruz
           navigate('/milestone', { 
             state: { 
@@ -70,10 +111,21 @@ export const WasteSubmissionModal = ({ onClose, onAnalysisComplete }: any) => {
           }); 
           onClose();
         }, 2000);
+      } else {
+        console.error('❌ [WasteSubmissionModal] AI analizi eksik:', response);
+        throw new Error('AI analizi bulunamadı');
       }
-    } catch (error) {
-      console.error("Hata:", error);
+    } catch (error: any) {
+      clearInterval(stepInterval);
+      console.error('💥 [WasteSubmissionModal] HATA:', {
+        message: error.message,
+        stack: error.stack,
+        error: error
+      });
+      
+      alert(`Hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
       setLoading(false);
+      setLoadingStep(0);
     }
   };
 

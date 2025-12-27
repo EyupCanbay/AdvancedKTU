@@ -13,61 +13,143 @@ const getAuthHeaders = () => {
 };
 
 export const analyzeWasteImage = async (file: File) => {
+  console.log('🔧 [API] analyzeWasteImage başladı');
+  console.log('📁 [API] Dosya bilgileri:', {
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    lastModified: new Date(file.lastModified).toISOString()
+  });
+
   try {
     const token = localStorage.getItem('token');
+    console.log('🔑 [API] Token kontrol:', token ? '✅ Mevcut' : '⚠️ Yok (guest olarak devam)');
+    
     const formData = new FormData();
     formData.append('image', file);
+    console.log('📦 [API] FormData oluşturuldu');
 
-    const response = await fetch(`${WASTE_API}/upload`, { 
+    const apiUrl = `${WASTE_API}/upload`;
+    console.log('🌐 [API] İstek URL:', apiUrl);
+    console.log('📤 [API] Fetch başlatılıyor...');
+
+    const headers: HeadersInit = {};
+    // Token varsa ekle, yoksa guest olarak devam et
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(apiUrl, { 
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}` 
-      },
+      headers: headers,
       body: formData,
+    });
+
+    console.log('📥 [API] Response alındı:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries())
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Servis Hatası: ${errorText}`);
+      console.error('❌ [API] Response başarısız:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorBody: errorText
+      });
+      throw new Error(`Servis Hatası (${response.status}): ${errorText}`);
     }
     
-    return await response.json();
-  } catch (error) {
-    console.error("Entegrasyon Hatası:", error);
+    const jsonData = await response.json();
+    console.log('✅ [API] JSON parse başarılı:', jsonData);
+    
+    return jsonData;
+  } catch (error: any) {
+    console.error('💥 [API] KRITIK HATA:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      error: error
+    });
+    
+    // Network hatası mı kontrol et
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.error('🌐 [API] Network hatası - Backend çalışmıyor olabilir!');
+      throw new Error('Backend servisine bağlanılamadı. Lütfen servislerin çalıştığından emin olun.');
+    }
+    
     throw error;
   }
 };
 
 /**
- * Çoklu cihaz açıklamasını backend'e gönder
+ * Çoklu cihaz açıklamasını ve konumunu backend'e gönder
  * Dependency Inversion Principle: Interface üzerinden çalışır
  */
-export const submitMultipleDevices = async (data: { description: string }): Promise<any> => {
+export const submitMultipleDevices = async (data: { 
+  description: string;
+  latitude: number;
+  longitude: number;
+}): Promise<any> => {
+  console.log('🔧 [API] submitMultipleDevices başladı');
+  console.log('📋 [API] Payload:', data);
+  
   try {
     const token = localStorage.getItem('token');
+    console.log('🔑 [API] Token:', token ? '✅ Mevcut' : '⚠️ Yok (guest olarak devam)');
     
     const payload = {
       description: data.description,
-      submissionDate: new Date(),
+      latitude: data.latitude,
+      longitude: data.longitude,
+      submissionDate: new Date().toISOString(),
     };
+    console.log('📦 [API] Gönderilecek payload:', payload);
 
-    const response = await fetch(`${WASTE_API}/devices/multiple`, {
+    const apiUrl = `${WASTE_API}/devices/multiple`;
+    console.log('🌐 [API] İstek URL:', apiUrl);
+
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Token varsa ekle, yoksa guest olarak devam et
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    console.log('📋 [API] Headers:', headers);
+
+    console.log('📤 [API] Fetch başlatılıyor...');
+    const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        ...getAuthHeaders(),
-        'Authorization': `Bearer ${token}`
-      },
+      headers: headers,
       body: JSON.stringify(payload),
+    });
+
+    console.log('📥 [API] Response alındı:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Çoklu cihaz gönderimi başarısız: ${errorText}`);
+      console.error('❌ [API] Response başarısız:', errorText);
+      throw new Error(`Çoklu cihaz gönderimi başarısız (${response.status}): ${errorText}`);
     }
 
-    return await response.json();
-  } catch (error) {
-    console.error("Çoklu Cihaz Gönderimi Hatası:", error);
+    const result = await response.json();
+    console.log('✅ [API] Başarılı response:', result);
+    return result;
+  } catch (error: any) {
+    console.error('💥 [API] submitMultipleDevices hatası:', error);
+    console.error('💥 [API] Hata detayı:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     throw error;
   }
 };
