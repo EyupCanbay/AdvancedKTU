@@ -11,7 +11,14 @@
   --font-display: "Manrope", sans-serif;
   --font-body: "Noto Sans", sans-serif;
 }
+@keyframes float-visual {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(2deg); }
+}
 
+.animate-float-visual {
+  animation: float-visual 4s ease-in-out infinite;
+}
 @layer components {
   .glass-panel {
     @apply bg-[#1a2c2e]/60 backdrop-blur-[12px] border border-[#244447]/50;
