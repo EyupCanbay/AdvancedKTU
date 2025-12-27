@@ -12,9 +12,12 @@ FROM alpine:latest
 
 RUN apk --no-cache add ca-certificates curl
 
-WORKDIR /root/
+WORKDIR /app
 
 COPY --from=builder /app/api .
+
+# Create uploads directory
+RUN mkdir -p /app/uploads
 
 EXPOSE 8081
 
