@@ -10,11 +10,12 @@ const PromptBuilder = require('./src/services/PromptBuilder');
 // Configuration
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'gpt-oss:120b-cloud';
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || "2e076dc923dd4c039d90db1ed2e95222.wJhjlJsz-qjUWufvNf6Nr1GI";
 const WASTE_SERVICE_URL = process.env.WASTE_SERVICE_URL || 'http://localhost:8081';
 const MAX_HISTORY = parseInt(process.env.MAX_HISTORY) || 10;
 
 // Initialize services
-const ollamaService = new OllamaService(OLLAMA_URL, OLLAMA_MODEL);
+const ollamaService = new OllamaService(OLLAMA_URL, OLLAMA_MODEL, OLLAMA_API_KEY);
 
 const actionHandler = new ActionHandler(WASTE_SERVICE_URL);
 

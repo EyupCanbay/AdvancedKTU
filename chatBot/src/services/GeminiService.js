@@ -1,15 +1,32 @@
 const axios = require('axios');
 
 class OllamaService {
-  constructor(baseUrl = 'http://localhost:11434', model = 'gpt-oss:120b-cloud') {
+  constructor(baseUrl = 'http://localhost:11434', model = 'gpt-oss:120b-cloud', apiKey = null) {
     this.baseUrl = baseUrl;
     this.model = model;
+    this.apiKey = apiKey;
     this.options = {
       temperature: 0.7,
       num_predict: 500,
       top_k: 40,
       top_p: 0.95
     };
+  }
+
+  /**
+   * Get axios config with optional API key
+   * @private
+   */
+  getAxiosConfig(timeout = 60000) {
+    const config = { timeout };
+    
+    if (this.apiKey) {
+      config.headers = {
+        'Authorization': `Bearer ${this.apiKey}`
+      };
+    }
+    
+    return config;
   }
 
   /**
@@ -32,9 +49,7 @@ class OllamaService {
           stream: false,
           options: this.options
         },
-        {
-          timeout: 60000 // 60 second timeout
-        }
+        this.getAxiosConfig(60000)
       );
       
       return response.data.message.content;
@@ -87,9 +102,7 @@ class OllamaService {
           stream: false,
           options: this.options
         },
-        {
-          timeout: 60000
-        }
+        this.getAxiosConfig(60000)
       );
       
       return response.data.response;
@@ -105,7 +118,7 @@ class OllamaService {
    */
   async checkHealth() {
     try {
-      const response = await axios.get(`${this.baseUrl}/api/tags`, { timeout: 5000 });
+      const response = await axios.get(`${this.baseUrl}/api/tags`, this.getAxiosConfig(5000));
       const models = response.data.models || [];
       const modelExists = models.some(m => m.name === this.model);
       
