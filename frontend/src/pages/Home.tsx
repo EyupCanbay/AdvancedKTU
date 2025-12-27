@@ -8,6 +8,7 @@ import { ChatBot } from '../components/ChatBot';
 
 // --- SADECE BU SATIRI EKLEDİK (Dışarıdaki güncel hesaplayıcı) ---
 import { CO2Calculator } from '../features/home/components/CO2Calculator'; 
+import { EWasteOrbit } from '../features/home/components/EWasteOrbit';
 
 // --- 1. Bölüm: AI Yolculuğu (DOKUNULMADI - SENİN KODUN) ---
 const AIJourneySection = ({ onStartClick }: { onStartClick: () => void }) => {
@@ -84,22 +85,8 @@ const Home = () => {
 
           {/* SAĞ TARAF: MORPHING ANIMASYONU - SENİN TASARIMIN */}
           <div className="lg:w-1/2 relative h-[500px] flex items-center justify-center">
-            <div className="absolute inset-0 bg-primary/10 blur-[120px] rounded-full animate-pulse"></div>
-            <div className="relative z-10 w-[400px] h-[400px]">
-              <div className="absolute inset-0 border-2 border-dashed border-primary/20 rounded-full animate-spin-slow"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="size-24 bg-background-dark border-2 border-primary rounded-full flex items-center justify-center shadow-glow">
-                  <span className="material-symbols-outlined text-5xl text-primary animate-spin-slow">sync</span>
-                </div>
-                <div className="absolute -top-10 p-4 bg-accent/20 rounded-full border border-accent/50 shadow-glow animate-bounce">
-                  <span className="material-symbols-outlined text-4xl text-accent">eco</span>
-                </div>
-                <div className="absolute bottom-10 right-0 p-4 bg-primary/20 rounded-full border border-primary/50 shadow-glow animate-pulse">
-                  <span className="material-symbols-outlined text-4xl text-primary">water_drop</span>
-                </div>
-              </div>
+  <EWasteOrbit />
             </div>
-          </div>
         </section>
 
         {/* 1. SÜREÇ BÖLÜMÜ */}

@@ -73,8 +73,8 @@ export const CO2Calculator = () => {
             // Görsel önerisi: Şarj olan telefon
             image="https://images.unsplash.com/photo-1583863788434-e58a36330cf0?q=80&w=800"
             tag="ENERJİ"
-            color="text-primary"
-            glowColor="from-primary/20"
+            color="text-red-500" 
+    glowColor="from-orange-500/20"
           />
           <CalculatorResultCard 
             value={Math.floor(totalCo2 * 10)} 

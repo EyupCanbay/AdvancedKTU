@@ -6,6 +6,7 @@ import CentersPage from './pages/CentersPage';
 import { MilestonePage } from './pages/MilestonePage';
 import { SelectCenterPage } from './pages/SelectCenterPage';
 import ImpactDashboard from './pages/ImpactDashboard';
+import { AboutPage } from './pages/AboutPage';
 
 function App() {
   return (
@@ -17,6 +18,8 @@ function App() {
       <Route path="/select-center" element={<SelectCenterPage />} />
       <Route path="/centers" element={<CentersPage />} />
       <Route path="/impact" element={<ImpactDashboard />} /> {/* Gerçek Zamanlı Etki Analizi */}
+      <Route path="/about" element={<AboutPage />} />
+<Route path="/about" element={<AboutPage />} />
     </Routes>
   );
 }

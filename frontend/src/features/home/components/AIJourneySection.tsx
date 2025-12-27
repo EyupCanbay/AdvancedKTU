@@ -56,10 +56,11 @@ export const AIJourneySection = ({ onStartClick }: { onStartClick: () => void })
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-20 relative">
           
-          {/* ADIMLAR ARASI AKAN ENERJİ HATTI (Desktop için) */}
-          <div className="hidden lg:block absolute top-1/2 left-0 w-full h-0.5 bg-white/5 -translate-y-1/2 overflow-hidden">
-            <div className="w-full h-full bg-gradient-to-r from-transparent via-primary to-transparent animate-marquee-fast opacity-50"></div>
-          </div>
+          <div className="hidden lg:block absolute top-1/2 left-0 w-full h-[2px] overflow-hidden">
+  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent opacity-40"></div>
+  <div className="absolute inset-0 animate-data-flow bg-[radial-gradient(circle,rgba(20,170,184,0.8)_2px,transparent_2px)] bg-[length:40px_4px]"></div>
+</div>
+
 
           {steps.map((step, index) => (
             <div 
