@@ -29,9 +29,6 @@ services:
       JWT_SECRET: super_secret_key_change_me
     ports:
       - "8080:8080"
-    depends_on:
-      mongo:
-        condition: service_healthy
     networks:
       - ktu_network
 
@@ -49,9 +46,6 @@ services:
       AI_SERVICE_URL: http://ai-service:3000/risk-degree
     ports:
       - "8081:8081"
-    depends_on:
-      auth-service:
-        condition: service_healthy
     volumes:
       - ./waste-service/uploads:/app/uploads
     networks:
@@ -87,9 +81,6 @@ services:
       MAX_HISTORY: 10
     ports:
       - "8083:8083"
-    depends_on:
-      waste-service:
-        condition: service_healthy
     networks:
       - ktu_network
 
