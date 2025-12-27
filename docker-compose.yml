@@ -1,7 +1,9 @@
 version: "3.8"
 
 services:
-  # MongoDB - Shared database for authentication and waste services
+  # =========================
+  # MongoDB
+  # =========================
   mongo:
     image: mongo:6.0
     container_name: ktu_mongo
@@ -16,23 +18,29 @@ services:
     networks:
       - ktu_network
 
+  # =========================
   # Authentication Service
+  # =========================
   auth-service:
     build:
       context: ./authentication-service
       dockerfile: Dockerfile
     container_name: ktu_auth_service
     environment:
+      PORT: 8080
       MONGO_URI: mongodb://admin:password123@mongo:27017
       DB_NAME: auth_db
-      PORT: 8080
       JWT_SECRET: super_secret_key_change_me
     ports:
       - "8080:8080"
+    depends_on:
+      - mongo
     networks:
       - ktu_network
 
+  # =========================
   # Waste Service
+  # =========================
   waste-service:
     build:
       context: ./waste-service
@@ -47,11 +55,17 @@ services:
     ports:
       - "8081:8081"
     volumes:
-      - ./waste-service/uploads:/app/uploads
+      # 🔥 ORTAK VOLUME
+      - shared_uploads:/app/uploads
+    depends_on:
+      - mongo
+      - auth-service
     networks:
       - ktu_network
 
+  # =========================
   # AI Service
+  # =========================
   ai-service:
     build:
       context: ./ai_service
@@ -59,16 +73,21 @@ services:
     container_name: ktu_ai_service
     environment:
       PORT: 3000
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-your-api-key-here}
       NODE_ENV: development
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-your-api-key-here}
     ports:
       - "3000:3000"
     volumes:
-      - ./waste-service/uploads:/app/uploads
+      # 🔥 AYNI VOLUME – AYNI PATH
+      - shared_uploads:/app/uploads
+    depends_on:
+      - waste-service
     networks:
       - ktu_network
 
+  # =========================
   # ChatBot Service
+  # =========================
   chatbot:
     build:
       context: ./chatBot
@@ -83,10 +102,14 @@ services:
       MAX_HISTORY: 10
     ports:
       - "8083:8083"
+    depends_on:
+      - waste-service
     networks:
       - ktu_network
 
+  # =========================
   # Admin Dashboard
+  # =========================
   admin:
     build:
       context: ./admin
@@ -98,12 +121,14 @@ services:
       - "3001:3001"
     depends_on:
       - auth-service
-    networks:
-      - ktu_network
     volumes:
       - ./admin/src:/app/src
+    networks:
+      - ktu_network
 
-  # Frontend Application
+  # =========================
+  # Frontend
+  # =========================
   frontend:
     build:
       context: ./frontend
@@ -116,14 +141,21 @@ services:
     depends_on:
       - auth-service
       - waste-service
-    networks:
-      - ktu_network
     volumes:
       - ./frontend/src:/app/src
+    networks:
+      - ktu_network
 
+# =========================
+# VOLUMES
+# =========================
 volumes:
   mongo_data:
+  shared_uploads:
 
+# =========================
+# NETWORK
+# =========================
 networks:
   ktu_network:
     driver: bridge
