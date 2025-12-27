@@ -41,8 +41,13 @@ export const WasteSubmissionModal = ({ onClose, onAnalysisComplete }: any) => {
       onAnalysisComplete(response.ai_analysis); 
 
       setTimeout(() => {
-        // Milestone sayfasına stats olarak sadece içindeki analiz verilerini yolluyoruz
-        navigate('/milestone', { state: { stats: response.ai_analysis } }); 
+        // Milestone sayfasına stats ve wasteID gönderiyoruz
+        navigate('/milestone', { 
+          state: { 
+            stats: response.ai_analysis,
+            wasteID: response.id // Waste ID'yi ekledik
+          } 
+        }); 
         onClose();
       }, 2000);
     }

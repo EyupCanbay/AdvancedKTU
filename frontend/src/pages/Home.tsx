@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/layout/Navbar';
 import { FeatureCard } from '../features/home/components/FeatureCard';
 import { ImpactAwareness } from '../features/home/components/ImpactAwareness';
@@ -6,6 +7,7 @@ import { ImpactDashboard } from '../features/home/components/ImpactDashboard';
 import { WasteSubmissionModal } from '../features/home/components/WasteSubmissionModal';
 
 const Home = () => {
+  const navigate = useNavigate();
   // Modalın açık/kapalı durumunu kontrol eden state
   const [isModalOpen, setIsModalOpen] = useState(false);
   
@@ -36,7 +38,12 @@ const Home = () => {
               >
                 Hemen Dönüştür
               </button>
-              <button className="h-12 px-8 border border-gray-600 hover:border-gray-400 rounded-lg font-bold transition-colors">Riskleri Öğren</button>
+              <button 
+                onClick={() => navigate('/impact')}
+                className="h-12 px-8 border border-gray-600 hover:border-primary hover:text-primary rounded-lg font-bold transition-colors"
+              >
+                Gerçek Zamanlı Etki
+              </button>
             </div>
           </div>
           

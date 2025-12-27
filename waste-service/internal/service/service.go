@@ -188,3 +188,9 @@ func (s *wasteService) DeletePoint(ctx context.Context, pointID string) error {
 	}
 	return s.repo.DeletePoint(ctx, objID)
 }
+
+// --- GERÇEK ZAMANLI ETKİ ANALİZİ ---
+
+func (s *wasteService) GetImpactAnalysis(ctx context.Context) (*domain.ImpactAnalysis, error) {
+	return s.repo.GetImpactStats(ctx)
+}

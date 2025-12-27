@@ -11,6 +11,11 @@ export const MilestonePage = () => {
   
   // 8081/upload endpoint'inden gelen analiz verileri
   const stats = state?.stats || {}; 
+  const wasteID = state?.wasteID || ''; // Waste ID'yi state'den alıyoruz
+  
+  // Ana metrik olarak CO2 emisyonunu kullan (kg cinsinden)
+  const totalRecycled = stats.CO2Emission || stats.cost || 0;
+  const unit = stats.CO2Emission ? 'kg CO₂' : 'USD';
 
   return (
     <div className="bg-background-dark text-white font-display overflow-x-hidden min-h-screen flex flex-col">
@@ -43,7 +48,9 @@ export const MilestonePage = () => {
             <span className="material-symbols-outlined text-base">military_tech</span>
             Milestone Unlocked
           </div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white glow-text">The Power of 18</h1>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white glow-text">
+            {totalRecycled > 0 ? `${totalRecycled} ${unit}` : 'Geri Dönüşüm Başarısı'}
+          </h1>
           <p className="text-text-subtle text-lg max-w-2xl mx-auto">Elite Recycler olma yolundaki başarını kutluyoruz. Etkin gerçek ve ölçülebilir.</p>
         </div>
 
@@ -64,10 +71,14 @@ export const MilestonePage = () => {
               ></circle>
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <span className="text-7xl md:text-8xl font-bold text-white tracking-tighter glow-text leading-none">18</span>
-              <span className="text-primary font-bold text-sm uppercase tracking-widest mt-2">Geri Dönüştürüldü</span>
+              <span className="text-7xl md:text-8xl font-bold text-white tracking-tighter glow-text leading-none">
+                {totalRecycled > 0 ? totalRecycled : '-'}
+              </span>
+              <span className="text-primary font-bold text-sm uppercase tracking-widest mt-2">
+                {totalRecycled > 0 ? `${unit} Geri Dönüştürüldü` : 'Veri Bekleniyor'}
+              </span>
               <div className="mt-4 px-3 py-1 bg-accent/20 border border-accent/40 rounded text-accent text-xs font-bold uppercase tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-                Tehlike Skoru: {stats.riskDegree}/10
+                Tehlike Skoru: {stats.riskDegree || 0}/10
               </div>
             </div>
           </div>
@@ -159,12 +170,12 @@ export const MilestonePage = () => {
         {/* Devam Et Butonu */}
         <div className="w-full py-6">
           <button 
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/select-center', { state: { stats, wasteID } })}
             className="group relative w-full overflow-hidden rounded-2xl bg-primary p-1 text-center font-bold text-white shadow-[0_0_30px_-5px_rgba(20,170,184,0.4)] transition-all hover:scale-[1.01]"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
             <div className="relative flex items-center justify-center gap-3 rounded-xl bg-background-dark/20 backdrop-blur-sm px-8 py-6 text-xl md:text-2xl uppercase tracking-widest border border-white/20">
-              Devam Etmek İstiyor musun?
+              Teslimat Merkezi Seç
               <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
             </div>
           </button>

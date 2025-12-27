@@ -29,6 +29,19 @@ interface CO2DataItem {
   emission: number;
 }
 
+interface ImpactAnalysis {
+  totalCO2Saved: number;
+  totalEnergyEquivalent: number;
+  totalWaterSaved: number;
+  treesEquivalent: number;
+  carsOffRoad: number;
+  phonesCharged: number;
+  lightHoursTotal: number;
+  totalWasteProcessed: number;
+  highRiskWastes: number;
+  lastUpdated: string;
+}
+
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
@@ -39,6 +52,7 @@ const Dashboard: React.FC = () => {
   const [wasteData, setWasteData] = useState<WasteData[]>([]);
   const [statusData, setStatusData] = useState<StatusDataItem[]>([]);
   const [co2Data, setCO2Data] = useState<CO2DataItem[]>([]);
+  const [impactData, setImpactData] = useState<ImpactAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -48,15 +62,22 @@ const Dashboard: React.FC = () => {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      const [usersRes, wasteRes, pointsRes] = await Promise.all([
+      const [usersRes, wasteRes, pointsRes, impactRes] = await Promise.all([
         api.get('/users').catch(() => ({ data: [] })),
         api.get('/api/wastes').catch(() => ({ data: [] })),
         api.get('/api/points').catch(() => ({ data: [] })),
+        api.get('/api/impact-analysis').catch(() => ({ data: null })),
       ]);
 
       const wastes = wasteRes.data || [];
       const users = usersRes.data || [];
       const points = pointsRes.data || [];
+      const impact = impactRes.data;
+
+      // Store impact data
+      if (impact) {
+        setImpactData(impact);
+      }
 
       // Calculate stats
       const riskCount = wastes.filter((w: any) => 
@@ -140,6 +161,62 @@ const Dashboard: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Gerçek Zamanlı Etki Analizi */}
+        {impactData && (
+          <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg shadow-lg p-6 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+              <span className="bg-green-500 w-3 h-3 rounded-full mr-3 animate-pulse"></span>
+              Gerçek Zamanlı Etki Analizi
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white rounded-lg p-4 shadow">
+                <p className="text-sm text-gray-600 mb-1">Toplam CO₂ Tasarrufu</p>
+                <p className="text-2xl font-bold text-green-600">{impactData.totalCO2Saved.toFixed(1)} kg</p>
+              </div>
+              
+              <div className="bg-white rounded-lg p-4 shadow">
+                <p className="text-sm text-gray-600 mb-1">Ağaç Eşdeğeri</p>
+                <p className="text-2xl font-bold text-green-700">{impactData.treesEquivalent.toFixed(0)} yıl</p>
+              </div>
+              
+              <div className="bg-white rounded-lg p-4 shadow">
+                <p className="text-sm text-gray-600 mb-1">Tasarruf Edilen Su</p>
+                <p className="text-2xl font-bold text-blue-600">{impactData.totalWaterSaved.toFixed(0)} L</p>
+              </div>
+              
+              <div className="bg-white rounded-lg p-4 shadow">
+                <p className="text-sm text-gray-600 mb-1">Enerji Eşdeğeri</p>
+                <p className="text-2xl font-bold text-yellow-600">{impactData.totalEnergyEquivalent.toFixed(0)} kWh</p>
+              </div>
+              
+              <div className="bg-white rounded-lg p-4 shadow">
+                <p className="text-sm text-gray-600 mb-1">Şarj Edilen Telefon</p>
+                <p className="text-2xl font-bold text-purple-600">{impactData.phonesCharged}</p>
+              </div>
+              
+              <div className="bg-white rounded-lg p-4 shadow">
+                <p className="text-sm text-gray-600 mb-1">LED Aydınlatma</p>
+                <p className="text-2xl font-bold text-indigo-600">{impactData.lightHoursTotal.toFixed(0)} saat</p>
+              </div>
+              
+              <div className="bg-white rounded-lg p-4 shadow">
+                <p className="text-sm text-gray-600 mb-1">Araba Eşdeğeri</p>
+                <p className="text-2xl font-bold text-orange-600">{impactData.carsOffRoad.toFixed(1)} km</p>
+              </div>
+              
+              <div className="bg-white rounded-lg p-4 shadow">
+                <p className="text-sm text-gray-600 mb-1">Yüksek Risk Atık</p>
+                <p className="text-2xl font-bold text-red-600">{impactData.highRiskWastes}</p>
+              </div>
+            </div>
+            
+            <div className="mt-4 text-right text-xs text-gray-500">
+              Son Güncelleme: {new Date(impactData.lastUpdated).toLocaleString('tr-TR')}
+            </div>
+          </div>
+        )}
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

@@ -58,6 +58,20 @@ type CollectionRequest struct {
 	CreatedAt         time.Time          `bson:"created_at" json:"created_at"`
 }
 
+// Gerçek Zamanlı Etki Analizi
+type ImpactAnalysis struct {
+	TotalCO2Saved         float64   `json:"totalCO2Saved"`
+	TotalEnergyEquivalent float64   `json:"totalEnergyEquivalent"`
+	TotalWaterSaved       float64   `json:"totalWaterSaved"`
+	TreesEquivalent       float64   `json:"treesEquivalent"`
+	CarsOffRoad           float64   `json:"carsOffRoad"`
+	PhonesCharged         int       `json:"phonesCharged"`
+	LightHoursTotal       float64   `json:"lightHoursTotal"`
+	TotalWasteProcessed   int       `json:"totalWasteProcessed"`
+	HighRiskWastes        int       `json:"highRiskWastes"`
+	LastUpdated           time.Time `json:"lastUpdated"`
+}
+
 // --- INTERFACE'LER ---
 
 type WasteRepository interface {
@@ -71,6 +85,7 @@ type WasteRepository interface {
 	// Demo verisi oluşturmak için (Harita noktaları boş kalmasın diye)
 	SeedPoints(ctx context.Context) error
 	SeedWastes(ctx context.Context) error
+	GetImpactStats(ctx context.Context) (*ImpactAnalysis, error)
 
 	// --- YENİ EKLENEN METODLAR (NOKTA YÖNETİMİ) ---
 	CreatePoint(ctx context.Context, point *CollectionPoint) error
@@ -90,4 +105,7 @@ type WasteService interface {
 	CreatePoint(ctx context.Context, point *CollectionPoint) error
 	UpdatePoint(ctx context.Context, pointID string, point *CollectionPoint) error
 	DeletePoint(ctx context.Context, pointID string) error
+
+	// --- GERÇEK ZAMANLI ETKİ ANALİZİ ---
+	GetImpactAnalysis(ctx context.Context) (*ImpactAnalysis, error)
 }

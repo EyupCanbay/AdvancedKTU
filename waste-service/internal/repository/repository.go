@@ -134,8 +134,11 @@ func (m *mongoRepository) DeletePoint(ctx context.Context, id primitive.ObjectID
 func (m *mongoRepository) SeedWastes(ctx context.Context) error {
 	collection := m.db.Collection("wastes")
 
-	// Drop existing wastes for development
-	collection.DeleteMany(ctx, bson.M{})
+	// Eğer zaten veri varsa, tekrar ekleme
+	count, _ := collection.CountDocuments(ctx, bson.M{})
+	if count > 0 {
+		return nil
+	}
 
 	wasteRecords := []interface{}{
 		&domain.Waste{
@@ -224,12 +227,77 @@ func (m *mongoRepository) SeedWastes(ctx context.Context) error {
 			UserID:      "admin@example.com",
 			ImagePath:   "/uploads/waste_4.jpg",
 			Description: "Cam atık - Şişeler ve kavanozlar",
-			Status:      "analyzing",
-			AIAnalysis:  nil,
-			CreatedAt:   time.Now(),
+			Status:      "analyzed",
+			AIAnalysis: &domain.AIAnalysisResult{
+				FullyChargingPhones:              3,
+				LightHours:                       80,
+				LedLighting:                      300,
+				DrivingCar:                       12.5,
+				CO2Emission:                      60.5,
+				CleanWater:                       800,
+				SoilDegradation:                  200,
+				ContaminatingGroundwater:         150,
+				EnergyConsumptionOfSmallWorkshop: 40,
+				LossRareEarthElements:            5.5,
+				MicroplasticPollutionMarineLife:  8,
+				AnnualCarbonSequestrationTree:    8,
+				HouseholdElectricityConsumption:  90,
+				DailyWaterConsumptionPeople:      120,
+				HumanCarbonFootprintOneDay:       1.2,
+				RiskDegree:                       3,
+				Cost:                             120000,
+			},
+			CreatedAt: time.Now(),
 		},
 	}
 
 	_, err := collection.InsertMany(ctx, wasteRecords)
 	return err
+}
+
+// GetImpactStats - Gerçek Zamanlı Etki Analizi
+func (m *mongoRepository) GetImpactStats(ctx context.Context) (*domain.ImpactAnalysis, error) {
+	collection := m.db.Collection("wastes")
+
+	// Tüm analyzed ve collected durumundaki atıkları çek
+	filter := bson.M{"status": bson.M{"$in": []string{"analyzed", "pending", "collected"}}}
+	cursor, err := collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var wastes []*domain.Waste
+	if err = cursor.All(ctx, &wastes); err != nil {
+		return nil, err
+	}
+
+	// Toplam metrikleri hesapla
+	impact := &domain.ImpactAnalysis{
+		LastUpdated: time.Now(),
+	}
+
+	highRiskCount := 0
+	for _, w := range wastes {
+		if w.AIAnalysis == nil {
+			continue
+		}
+
+		impact.TotalCO2Saved += w.AIAnalysis.CO2Emission
+		impact.TotalEnergyEquivalent += w.AIAnalysis.LedLighting
+		impact.TotalWaterSaved += w.AIAnalysis.CleanWater
+		impact.TreesEquivalent += w.AIAnalysis.AnnualCarbonSequestrationTree
+		impact.CarsOffRoad += w.AIAnalysis.DrivingCar
+		impact.PhonesCharged += w.AIAnalysis.FullyChargingPhones
+		impact.LightHoursTotal += w.AIAnalysis.LightHours
+
+		if w.AIAnalysis.RiskDegree >= 7 {
+			highRiskCount++
+		}
+	}
+
+	impact.TotalWasteProcessed = len(wastes)
+	impact.HighRiskWastes = highRiskCount
+
+	return impact, nil
 }

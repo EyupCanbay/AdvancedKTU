@@ -146,11 +146,38 @@ func (h *WasteHandler) DeletePoint(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"message": "Nokta silindi"})
 }
 
+// 7. Gerçek Zamanlı Etki Analizi
+func (h *WasteHandler) GetImpactAnalysis(c echo.Context) error {
+	impact, err := h.service.GetImpactAnalysis(c.Request().Context())
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, impact)
+}
+
+// 8. Debug - Tüm atıkları detaylı göster (geliştirme için)
+func (h *WasteHandler) GetWastesDebug(c echo.Context) error {
+	wastes, err := h.service.GetWastes(c.Request().Context())
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	// Detaylı debug bilgisi
+	response := map[string]interface{}{
+		"total":  len(wastes),
+		"wastes": wastes,
+	}
+
+	return c.JSON(http.StatusOK, response)
+}
+
 // Rotaları Tanımla (GÜNCELLENDİ)
 func (h *WasteHandler) RegisterRoutes(e *echo.Group) {
 	e.POST("/upload", h.Upload)
 	e.GET("/points", h.GetPoints)
 	e.GET("/wastes", h.GetWastes)
+	e.GET("/wastes/debug", h.GetWastesDebug)    // Debug endpoint
 	e.PATCH("/wastes/:id", h.UpdateWasteStatus) // Atık durumunu güncelle
 	e.DELETE("/wastes/:id", h.DeleteWaste)      // Atık sil
 	e.POST("/requests", h.CreateRequest)
@@ -158,4 +185,6 @@ func (h *WasteHandler) RegisterRoutes(e *echo.Group) {
 	e.POST("/points", h.CreatePoint)       // Nokta ekle
 	e.PUT("/points/:id", h.UpdatePoint)    // Nokta güncelle
 	e.DELETE("/points/:id", h.DeletePoint) // Nokta sil
+
+	// NOT: /impact-analysis main.go'da public olarak tanımlı
 }

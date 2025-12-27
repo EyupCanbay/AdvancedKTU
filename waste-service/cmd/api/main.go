@@ -41,6 +41,21 @@ func main() {
 	repo.SeedPoints(context.Background())
 	repo.SeedWastes(context.Background())
 
+	// Debug: Etki analizi sonuçlarını kontrol et
+	go func() {
+		time.Sleep(2 * time.Second)
+		impact, err := svc.GetImpactAnalysis(context.Background())
+		if err != nil {
+			log.Printf("❌ Etki analizi hatası: %v", err)
+		} else {
+			log.Printf("✅ Etki Analizi:")
+			log.Printf("   - İşlenen Atık: %d", impact.TotalWasteProcessed)
+			log.Printf("   - CO₂: %.1f kg", impact.TotalCO2Saved)
+			log.Printf("   - Su: %.0f L", impact.TotalWaterSaved)
+			log.Printf("   - Enerji: %.0f kWh", impact.TotalEnergyEquivalent)
+		}
+	}()
+
 	// 4. Echo Server
 	e := echo.New()
 
@@ -59,14 +74,20 @@ func main() {
 	// Static dosya sunumu (Yüklenen resimlere tarayıcıdan erişmek için)
 	e.Static("/uploads", "./uploads")
 
-	// 5. Rotalar ve Middleware
+	// 5. Public Rotalar (Auth gerektirmeyen)
+	publicGroup := e.Group("/api")
+	publicGroup.GET("/impact-analysis", func(c echo.Context) error {
+		return h.GetImpactAnalysis(c)
+	})
+
+	// 6. Korumalı Rotalar (Auth gerektiren)
 	// Tüm /api rotaları Auth korumasında olacak
 	apiGroup := e.Group("/api")
 	apiGroup.Use(middleware.AuthGuard(cfg.AuthServiceURL))
 
 	h.RegisterRoutes(apiGroup)
 
-	// 6. Başlat
+	// 7. Başlat
 	log.Printf("Waste Service running on port %s", cfg.Port)
 	e.Logger.Fatal(e.Start(":" + cfg.Port))
 }
