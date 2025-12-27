@@ -1,0 +1,69 @@
+# Docker Build Ignore File
+# Bu dosya Docker build sırasında hangi dosyaların göz ardı edileceğini belirler
+
+# Node.js
+node_modules
+npm-debug.log
+package-lock.json
+yarn.lock
+
+# Go
+*.o
+*.a
+*.so
+.DS_Store
+dist/
+build/
+*.exe
+*.dll
+*.dylib
+
+# Version Control
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Documentation
+*.md
+docs/
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+/dist
+/build
+/out
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+.coverage
+.nyc_output
+coverage/
+
+

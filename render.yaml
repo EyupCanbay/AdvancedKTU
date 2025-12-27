@@ -16,7 +16,7 @@ services:
         value: 8080
       - key: DB_NAME
         value: auth_db
-      - key: MONGO_URI
+      - key:  MONGO_URI
         sync: false  # Render Dashboard'dan manuel girilecek
       - key: JWT_SECRET
         generateValue: true  # Otomatik güçlü secret üretir
@@ -72,7 +72,6 @@ services:
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
-    plan: free
     envVars:
       - key: VITE_API_BASE_URL
         fromService:
@@ -107,7 +106,6 @@ services:
     rootDir: admin
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
-    plan: free
     envVars:
       - key: VITE_API_BASE_URL
         fromService:
