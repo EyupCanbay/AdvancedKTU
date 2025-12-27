@@ -15,7 +15,7 @@ const WASTE_SERVICE_URL = process.env.WASTE_SERVICE_URL || 'http://localhost:808
 const MAX_HISTORY = parseInt(process.env.MAX_HISTORY) || 10;
 
 // Initialize services
-const ollamaService = new OllamaService(OLLAMA_URL, OLLAMA_MODEL, OLLAMA_API_KEY);
+const ollamaService = new OllamaService(OLLAMA_URL, OLLAMA_MODEL, "2e076dc923dd4c039d90db1ed2e95222.wJhjlJsz-qjUWufvNf6Nr1GI");
 
 const actionHandler = new ActionHandler(WASTE_SERVICE_URL);
 

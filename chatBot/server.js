@@ -12,6 +12,7 @@ const app = express();
 const PORT = process.env.PORT || 8083;
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'gpt-oss:120b-cloud';
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || null;
 const WASTE_SERVICE_URL = process.env.WASTE_SERVICE_URL || 'http://localhost:8081';
 
 // Middleware
@@ -19,7 +20,7 @@ app.use(cors());
 app.use(express.json());
 
 // Initialize services
-const ollamaService = new OllamaService(OLLAMA_URL, OLLAMA_MODEL);
+const ollamaService = new OllamaService(OLLAMA_URL, OLLAMA_MODEL, "2e076dc923dd4c039d90db1ed2e95222.wJhjlJsz-qjUWufvNf6Nr1GI");
 const actionHandler = new ActionHandler(WASTE_SERVICE_URL);
 
 // In-memory conversation storage (her kullanıcı için ayrı)

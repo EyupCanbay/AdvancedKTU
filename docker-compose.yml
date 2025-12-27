@@ -92,6 +92,32 @@ services:
       timeout: 5s
       retries: 5
 
+  # ChatBot Service
+  chatbot:
+    build:
+      context: ./chatBot
+      dockerfile: Dockerfile
+    container_name: ktu_chatbot
+    environment:
+      PORT: 8083
+      OLLAMA_URL: ${OLLAMA_URL:-https://api.ollama.ai}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gpt-oss:120b-cloud}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY}
+      WASTE_SERVICE_URL: http://waste-service:8081
+      MAX_HISTORY: 10
+    ports:
+      - "8083:8083"
+    depends_on:
+      waste-service:
+        condition: service_healthy
+    networks:
+      - ktu_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Admin Dashboard
   admin:
     build:

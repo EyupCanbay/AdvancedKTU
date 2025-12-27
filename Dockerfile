@@ -6,6 +6,7 @@
 # - authentication-service (Go, Port: 8080)
 # - waste-service (Go, Port: 8081)
 # - ai_service (Node.js, Port: 3000)
+# - chatbot (Node.js, Port: 8083)
 # - frontend (React/Node.js, Port: 5174)
 # - admin (React/Node.js, Port: 5173)
 
@@ -86,7 +87,31 @@ EXPOSE 3000
 CMD ["npm", "start"]
 
 # ============================================================================
-# STAGE 4: Frontend (React + Vite)
+# STAGE 4: ChatBot Service (Node.js)
+# ============================================================================
+FROM node:22-alpine AS chatbot-builder
+
+WORKDIR /app/chatBot
+
+COPY chatBot/package*.json ./
+
+RUN npm ci --only=production
+
+COPY chatBot/ .
+
+# ChatBot Service Runtime
+FROM node:22-alpine AS chatbot
+
+WORKDIR /app
+
+COPY --from=chatbot-builder /app/chatBot .
+
+EXPOSE 8083
+
+CMD ["node", "server.js"]
+
+# ======6=====================================================================
+# STAGE 5: Frontend (React + Vite)
 # ============================================================================
 FROM node:22-alpine AS frontend-builder
 
