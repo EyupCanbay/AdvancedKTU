@@ -2,7 +2,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { WasteSubmissionModal } from '../../features/home/components/WasteSubmissionModal';
 
-export const Navbar = () => {
+interface NavbarProps {
+  onAtikBildirClick: () => void; // Modal açma fonksiyonu
+}
+export const Navbar = ({ onAtikBildirClick }: NavbarProps) => {
+  <header className="sticky top-0 z-50 w-full border-b border-border-dark bg-[#112022]/90 backdrop-blur-md"></header>
   const [isModalOpen, setIsModalOpen] = useState(false); // Modal kontrolü
   const [user, setUser] = useState<{ firstName: string } | null>(null);
   const navigate = useNavigate();
@@ -49,9 +53,8 @@ export const Navbar = () => {
               )}
 
               <button 
-                onClick={() => setIsModalOpen(true)} // Butona tıklandığında modalı açar
-                className="rounded-lg h-10 px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold shadow-lg transition-colors"
-              >
+                onClick={onAtikBildirClick} // Butona tıklandığında modalı açar
+className="rounded-lg h-10 px-5 bg-primary hover:bg-primary-dark text-white text-sm font-bold shadow-lg shadow-primary/20 transition-all active:scale-95"              >
                 Atık Bildir
               </button>
             </div>

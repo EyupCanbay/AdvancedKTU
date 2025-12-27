@@ -1,110 +1,130 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { analyzeWasteImage } from '../../../services/api';
 
-interface WasteSubmissionModalProps {
-  onClose: () => void;
-  onSubmit?: () => void;
-}
+export const WasteSubmissionModal = ({ onClose, onAnalysisComplete }: any) => {
+  const navigate = useNavigate();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0); // Simülasyon adımları
+  const [success, setSuccess] = useState(false);
 
-export const WasteSubmissionModal = ({ onClose, onSubmit }: WasteSubmissionModalProps) => {
-  const [isBatteryWarning, setIsBatteryWarning] = useState(false);
+  const steps = [
+    "Görsel verisi taranıyor...",
+    "AI modeli ile nesne tanımlanıyor...",
+    "Çevresel etki metrikleri hesaplanıyor...",
+    "Final raporu hazırlanıyor..."
+  ];
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (onSubmit) {
-      onSubmit();
+  // Dosya seçildiğinde önizleme oluştur
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const url = URL.createObjectURL(file); // Binary dosyadan geçici URL
+      setPreviewUrl(url);
     }
   };
 
+  const handleSubmit = async () => {
+  if (!selectedFile) return;
+  setLoading(true);
+
+  try {
+    const response = await analyzeWasteImage(selectedFile); 
+    // Backend'den dönen 'response' bir Waste objesidir.
+    
+    if (response && response.ai_analysis) { 
+      setSuccess(true);
+      // SADECE analiz kısmını gönderiyoruz
+      onAnalysisComplete(response.ai_analysis); 
+
+      setTimeout(() => {
+        // Milestone sayfasına stats olarak sadece içindeki analiz verilerini yolluyoruz
+        navigate('/milestone', { state: { stats: response.ai_analysis } }); 
+        onClose();
+      }, 2000);
+    }
+  } catch (error) {
+    console.error("Hata:", error);
+    setLoading(false);
+  }
+};
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
-      {/* Arka Plan Karartma */}
-      <div 
-        className="absolute inset-0 bg-[#112022]/80 backdrop-blur-sm transition-opacity" 
-        onClick={onClose}
-      />
-      
-      {/* Glass Card Panel */}
-      <div className="w-full max-w-2xl relative z-10 animate-in fade-in zoom-in duration-300">
-        <div className="backdrop-blur-xl bg-[#1a2c2e]/90 border border-[#244447]/50 rounded-2xl shadow-[0_0_40px_-10px_rgba(20,170,184,0.1)] p-8 md:p-10 relative overflow-hidden group">
-          
-          {/* Kapatma Butonu */}
-          <button 
-            onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
-          >
-            <span className="material-symbols-outlined">close</span>
-          </button>
-
-          {/* Dekoratif Üst Çizgi */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#14aab8]/50 to-transparent" />
-
-          {/* Header Bölümü */}
-          <div className="mb-10 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#14aab8]/10 border border-[#14aab8]/20 text-[#14aab8] text-xs font-bold mb-4">
-              <span className="material-symbols-outlined text-base">science</span>
-              AI DESTEKLİ ANALİZhandleSubmit
-            </div>
-            <h2 className="font-display font-extrabold text-3xl text-white mb-3 tracking-tight">Atık Bildirim Paneli</h2>
-            <p className="text-gray-400 text-sm max-w-md mx-auto">Eski cihazınızı yapay zeka ile analiz edin, geri dönüşüm değerini öğrenin.</p>
+    <div className="glass-panel p-8 rounded-3xl w-full max-w-lg bg-[#1a2c2e]/95 backdrop-blur-2xl border border-white/10 shadow-glow">
+      {success ? (
+        // BAŞARI EKRANI
+        <div className="flex flex-col items-center justify-center py-12 animate-in zoom-in duration-500">
+          <div className="size-24 bg-accent/20 rounded-full flex items-center justify-center text-accent mb-6 shadow-[0_0_40px_rgba(16,185,129,0.3)]">
+            <span className="material-symbols-outlined text-6xl">verified</span>
+          </div>
+          <h2 className="text-3xl font-black text-white mb-2">Analiz Tamam!</h2>
+          <p className="text-text-subtle text-center">Doğaya katkın ölçüldü. Milestone sayfasına aktarılıyorsun...</p>
+        </div>
+      ) : (
+        // FORM VE LOADING EKRANI
+        <>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">psychology</span>
+              AI Atık Analizi
+            </h2>
+            {!loading && (
+              <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            )}
           </div>
 
-          {/* Form */}
-          <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-            {/* Cihaz Bilgisi */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-gray-300 ml-1">Cihaz Bilgisi</label>
-              <div className="relative group">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#14aab8] transition-colors">devices</span>
-                <input 
-                  className="w-full h-12 bg-[#1a2c2e] border border-[#244447] rounded-xl pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-[#14aab8] focus:ring-1 focus:ring-[#14aab8] transition-all" 
-                  placeholder="Örn: iPhone 11, Samsung S20"
-                />
+          {/* FOTOĞRAF ÖNİZLEME ALANI */}
+          <div className="relative group border-2 border-dashed border-border-dark rounded-2xl h-64 flex items-center justify-center overflow-hidden bg-background-dark/50">
+            {previewUrl ? (
+              <img src={previewUrl} alt="Atık Önizleme" className="w-full h-full object-cover" />
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-gray-500">
+                <span className="material-symbols-outlined text-5xl">add_a_photo</span>
+                <p className="text-sm font-bold">Analiz edilecek fotoğrafı seçin</p>
               </div>
-            </div>
+            )}
+            {!loading && (
+              <input 
+                type="file" 
+                accept="image/*"
+                onChange={handleFileChange}
+                className="absolute inset-0 opacity-0 cursor-pointer z-20" 
+              />
+            )}
+          </div>
 
-            {/* Fotoğraf Yükleme Alanı */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-gray-300 ml-1">Cihaz Fotoğrafı</label>
-              <div className="relative w-full group/upload cursor-pointer border-2 border-dashed border-[#346165] rounded-xl bg-[#1a2c2e]/40 hover:bg-[#1a2c2e]/80 hover:border-[#14aab8]/50 transition-all p-8 flex flex-col items-center justify-center gap-3">
-                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer z-10" />
-                <div className="w-14 h-14 rounded-full bg-[#244447] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-3xl text-[#14aab8]">add_a_photo</span>
-                </div>
-                <p className="text-white font-bold">Fotoğrafı Seçin</p>
-                <span className="text-xs text-gray-500">JPG, PNG - Max 5MB</span>
+          {/* LOADING SİMÜLASYONU */}
+          {loading ? (
+            <div className="mt-8 space-y-4">
+              <div className="w-full bg-surface-dark h-2 rounded-full overflow-hidden">
+                <div 
+                  className="bg-primary h-full transition-all duration-500" 
+                  style={{ width: `${((loadingStep + 1) / steps.length) * 100}%` }}
+                ></div>
               </div>
+              <p className="text-primary font-bold text-center animate-pulse flex items-center justify-center gap-2">
+                <span className="animate-spin material-symbols-outlined text-sm">sync</span>
+                {steps[loadingStep]}
+              </p>
             </div>
-
-            {/* Güvenlik Kontrolü */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-[#1a2c2e]/50 border border-transparent hover:border-[#244447] transition-all">
-                <input 
-                  type="checkbox" 
-                  id="bat-check" 
-                  className="w-5 h-5 rounded border-[#346165] bg-transparent text-[#14aab8] focus:ring-0" 
-                  onChange={(e) => setIsBatteryWarning(e.target.checked)}
-                />
-                <label htmlFor="bat-check" className="text-white text-sm cursor-pointer">Cihazın bataryasında şişme veya akma var mı?</label>
-              </div>
-
-              {isBatteryWarning && (
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-[#f59e0b]/5 border border-[#f59e0b]/30 animate-in slide-in-from-top-2">
-                  <span className="material-symbols-outlined text-[#f59e0b]">warning</span>
-                  <p className="text-gray-300 text-xs">
-                    <b className="text-[#f59e0b]">DİKKAT:</b> Şişmiş piller risk taşır. Lütfen gönderimden önce rehberimizi inceleyin.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Gönder Butonu */}
-            <button type="submit" className="w-full h-14 bg-[#14aab8] hover:bg-[#0e7c86] text-white font-display font-extrabold text-lg rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
-              Atığı Analiz Et ve Bildir
-              <span className="material-symbols-outlined">arrow_forward</span>
+          ) : (
+            <button 
+              onClick={handleSubmit}
+              disabled={!selectedFile}
+              className={`w-full h-16 mt-8 rounded-xl font-black uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${
+                selectedFile ? "bg-primary text-background-dark shadow-glow hover:scale-[1.02]" : "bg-border-dark text-gray-600 cursor-not-allowed"
+              }`}
+            >
+              Atığı Analiz Et ve Bildir <span className="material-symbols-outlined">analytics</span>
             </button>
-          </form>
-        </div>
-      </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

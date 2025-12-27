@@ -1,12 +1,21 @@
+import { useState } from 'react';
 import { Navbar } from '../components/layout/Navbar';
 import { FeatureCard } from '../features/home/components/FeatureCard';
 import { ImpactAwareness } from '../features/home/components/ImpactAwareness';
 import { ImpactDashboard } from '../features/home/components/ImpactDashboard';
+import { WasteSubmissionModal } from '../features/home/components/WasteSubmissionModal';
 
 const Home = () => {
+  // Modalın açık/kapalı durumunu kontrol eden state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // AI analizinden gelen verileri tutan state
+  const [analysisData, setAnalysisData] = useState<any>(null);
+
   return (
-    <div className="bg-background-dark min-h-screen font-display text-white">
-      <Navbar />
+    <div className="bg-background-dark min-h-screen font-display text-white relative">
+      {/* Navbar'a modal açma fonksiyonunu gönderiyoruz */}
+      <Navbar onAtikBildirClick={() => setIsModalOpen(true)} />
       
       <main>
         {/* Hero Section */}
@@ -21,7 +30,12 @@ const Home = () => {
               Evinizdeki eski elektronikler sadece çöp değil, doğa için birer saatli bomba. Gelecek nesilleri korumak için güvenli dönüşümü şimdi başlatın.
             </p>
             <div className="flex gap-4">
-              <button className="h-12 px-8 bg-primary hover:bg-primary-dark rounded-lg font-bold shadow-lg shadow-primary/25 transition-all">Hemen Dönüştür</button>
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="h-12 px-8 bg-primary hover:bg-primary-dark rounded-lg font-bold shadow-lg shadow-primary/25 transition-all active:scale-95"
+              >
+                Hemen Dönüştür
+              </button>
               <button className="h-12 px-8 border border-gray-600 hover:border-gray-400 rounded-lg font-bold transition-colors">Riskleri Öğren</button>
             </div>
           </div>
@@ -30,19 +44,27 @@ const Home = () => {
             <div className="absolute inset-0 bg-gradient-to-tr from-background-dark/80 to-transparent z-10"></div>
             <img src="/hero-waste.jpg" className="w-full h-full object-cover" alt="E-Waste Transformation" />
             <div className="absolute bottom-6 left-6 z-20 glass-panel p-4 rounded-xl">
-              <div className="flex items-center gap-3 mb-1 font-bold"><span className="material-symbols-outlined text-accent">check_circle</span>Güvenli İmha</div>
+              <div className="flex items-center gap-3 mb-1 font-bold">
+                <span className="material-symbols-outlined text-accent">check_circle</span>
+                Güvenli İmha
+              </div>
               <p className="text-gray-300 text-xs">Verileriniz ve doğa %100 güvende.</p>
             </div>
           </div>
         </section>
 
-        {/* YENİ: Zararlar Bölümü */}
+        {/* Zararlar Bölümü */}
         <ImpactAwareness />
 
-        {/* YENİ: Etki Analizi Dashboard */}
-        <ImpactDashboard />
+        {/* Dinamik Dashboard: AI'dan gelen veriler (riskDegree, CO2Emission vb.) buraya aktarılıyor */}
+        <ImpactDashboard 
+          riskScore={analysisData?.riskDegree || 0} 
+          co2Emission={analysisData?.CO2Emission || 0}
+          recoveredValue={analysisData?.cost || 0}
+          waterImpact={analysisData?.cleanWater || 0}
+        />
 
-        {/* Feature Section: Kullanıcı Tipleri */}
+        {/* Feature Section: Nasıl Çalışır? */}
         <section className="max-w-[1280px] mx-auto px-4 py-20">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4">Nasıl Çalışır?</h2>
@@ -60,7 +82,7 @@ const Home = () => {
                 { icon: 'local_shipping', title: 'Ücretsiz Alım', description: 'Kuryemiz kapına gelsin.', iconColor: 'text-accent' }
               ]}
             />
-             <FeatureCard 
+            <FeatureCard 
               title="Akıllı Toplama Sistemi"
               description="Teknoloji destekli lojistik ağımız ile karbon ayak izini en aza indiriyoruz."
               mainIcon="hub"
@@ -73,6 +95,16 @@ const Home = () => {
           </div>
         </section>
       </main>
+
+      {/* ATIK BİLDİRİM MODALI: Sadece isModalOpen true olduğunda görünür */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
+          <WasteSubmissionModal 
+            onClose={() => setIsModalOpen(false)} 
+            onAnalysisComplete={(data: any) => setAnalysisData(data)} 
+          />
+        </div>
+      )}
     </div>
   );
 };
