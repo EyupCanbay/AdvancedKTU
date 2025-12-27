@@ -15,11 +15,6 @@ services:
       - mongo_data:/data/db
     networks:
       - ktu_network
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # Authentication Service
   auth-service:
@@ -39,11 +34,6 @@ services:
         condition: service_healthy
     networks:
       - ktu_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/swagger/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # Waste Service
   waste-service:
@@ -66,11 +56,6 @@ services:
       - ./waste-service/uploads:/app/uploads
     networks:
       - ktu_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/api/impact-analysis"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # AI Service
   ai-service:
@@ -86,11 +71,6 @@ services:
       - "3000:3000"
     networks:
       - ktu_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # ChatBot Service
   chatbot:
@@ -112,11 +92,6 @@ services:
         condition: service_healthy
     networks:
       - ktu_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # Admin Dashboard
   admin:
