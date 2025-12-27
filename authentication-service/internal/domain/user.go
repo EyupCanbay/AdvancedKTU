@@ -21,10 +21,12 @@ type User struct {
 	FirstName string             `bson:"first_name" json:"first_name"`
 	LastName  string             `bson:"last_name" json:"last_name"`
 	Password  string             `bson:"password" json:"-"`
-	Addresses []Address `bson:"addresses" json:"addresses"`
-	Active    bool      `bson:"active" json:"active"`
-	CreatedAt time.Time `bson:"created_at" json:"created_at"`
-	UpdatedAt time.Time `bson:"updated_at" json:"updated_at"`
+	Addresses []Address          `bson:"addresses" json:"addresses"`
+	Role      string             `bson:"role" json:"role"` // "admin" veya "user"
+	Active    bool               `bson:"active" json:"active"`
+	DeletedAt *time.Time         `bson:"deleted_at,omitempty" json:"deleted_at,omitempty"` // Soft delete
+	CreatedAt time.Time          `bson:"created_at" json:"created_at"`
+	UpdatedAt time.Time          `bson:"updated_at" json:"updated_at"`
 }
 
 type UserRepository interface {
@@ -34,6 +36,7 @@ type UserRepository interface {
 	Create(ctx context.Context, user *User) error
 	Update(ctx context.Context, user *User) error
 	Delete(ctx context.Context, id string) error
+	SeedUsers(ctx context.Context) error
 }
 
 type AuthService interface {

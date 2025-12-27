@@ -64,18 +64,26 @@ func (s *wasteService) UploadAndAnalyze(ctx context.Context, userID string, file
 		Status:      "analyzing",
 	}
 
+	// Veritabanına kaydet (analyzing durumunda)
+	if err := s.repo.Create(ctx, waste); err != nil {
+		return nil, err
+	}
+
+	// AI servisini çağır
 	analysis, err := s.callAIService(fullPath, description)
 
 	if err == nil {
-		waste.AIAnalysis = analysis
-		waste.Status = "analyzed"
+		// AI analizi başarılı ise veritabanını güncelle
+		if err := s.repo.UpdateAnalysis(ctx, waste.ID, analysis); err != nil {
+			fmt.Printf("Analiz Kaydı Hatası: %v\n", err)
+		} else {
+			waste.AIAnalysis = analysis
+			waste.Status = "analyzed"
+		}
 	} else {
+		// AI analizi başarısız ise durumu güncelle
 		fmt.Printf("AI Hatası: %v\n", err)
 		waste.Status = "analysis_failed"
-	}
-
-	if err := s.repo.Create(ctx, waste); err != nil {
-		return nil, err
 	}
 
 	return waste, nil
@@ -125,6 +133,26 @@ func (s *wasteService) GetCollectionPoints(ctx context.Context) ([]*domain.Colle
 	return s.repo.GetAllPoints(ctx)
 }
 
+func (s *wasteService) GetWastes(ctx context.Context) ([]*domain.Waste, error) {
+	return s.repo.GetWastes(ctx)
+}
+
+func (s *wasteService) UpdateWasteStatus(ctx context.Context, wasteID, status string) error {
+	objID, err := primitive.ObjectIDFromHex(wasteID)
+	if err != nil {
+		return fmt.Errorf("geçersiz waste ID formatı")
+	}
+	return s.repo.UpdateWasteStatus(ctx, objID, status)
+}
+
+func (s *wasteService) DeleteWaste(ctx context.Context, wasteID string) error {
+	objID, err := primitive.ObjectIDFromHex(wasteID)
+	if err != nil {
+		return fmt.Errorf("geçersiz waste ID formatı")
+	}
+	return s.repo.DeleteWaste(ctx, objID)
+}
+
 func (s *wasteService) CreateCollectionRequest(ctx context.Context, userID, wasteID, pointID string) (*domain.CollectionRequest, error) {
 	wID, _ := primitive.ObjectIDFromHex(wasteID)
 	pID, _ := primitive.ObjectIDFromHex(pointID)
@@ -137,4 +165,26 @@ func (s *wasteService) CreateCollectionRequest(ctx context.Context, userID, wast
 	}
 	err := s.repo.CreateRequest(ctx, req)
 	return req, err
+}
+
+// --- YENİ EKLENEN METODLAR (NOKTA YÖNETİMİ) ---
+
+func (s *wasteService) CreatePoint(ctx context.Context, point *domain.CollectionPoint) error {
+	return s.repo.CreatePoint(ctx, point)
+}
+
+func (s *wasteService) UpdatePoint(ctx context.Context, pointID string, point *domain.CollectionPoint) error {
+	objID, err := primitive.ObjectIDFromHex(pointID)
+	if err != nil {
+		return fmt.Errorf("geçersiz ID formatı")
+	}
+	return s.repo.UpdatePoint(ctx, objID, point)
+}
+
+func (s *wasteService) DeletePoint(ctx context.Context, pointID string) error {
+	objID, err := primitive.ObjectIDFromHex(pointID)
+	if err != nil {
+		return fmt.Errorf("geçersiz ID formatı")
+	}
+	return s.repo.DeletePoint(ctx, objID)
 }

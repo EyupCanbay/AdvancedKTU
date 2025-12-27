@@ -46,6 +46,9 @@ func (s *userService) Create(ctx context.Context, user *domain.User) error {
 	}
 
 	user.Active = true
+	if user.Role == "" {
+		user.Role = "user" // Default rol
+	}
 	return s.repo.Create(ctx, user)
 }
 
@@ -59,6 +62,7 @@ func (s *userService) Update(ctx context.Context, id string, user *domain.User) 
 	existing.LastName = user.LastName
 	existing.Email = user.Email
 	existing.Active = user.Active
+	existing.Role = user.Role // Role'ü güncelle
 
 	// Eğer güncelleme isteğinde adres gönderilmişse güncelle, boşsa eskisini koru veya hata fırlat
 	// Senaryo: Adres listesi tamamen değiştirilmek isteniyor olabilir.
@@ -66,7 +70,7 @@ func (s *userService) Update(ctx context.Context, id string, user *domain.User) 
 		existing.Addresses = user.Addresses
 	}
 	// Not: Eğer kullanıcı adreslerini tamamen silmeye çalışırsa (boş array yollarsa)
-	// yukarıdaki if bloğu çalışmaz ve eski adresler kalır. 
+	// yukarıdaki if bloğu çalışmaz ve eski adresler kalır.
 	// Eğer silmeye izin verilmeyecekse bu mantık doğrudur (En az 1 adres kuralı).
 
 	if user.Password != "" {

@@ -64,13 +64,30 @@ type WasteRepository interface {
 	Create(ctx context.Context, waste *Waste) error
 	UpdateAnalysis(ctx context.Context, id primitive.ObjectID, analysis *AIAnalysisResult) error
 	GetAllPoints(ctx context.Context) ([]*CollectionPoint, error)
+	GetWastes(ctx context.Context) ([]*Waste, error)
+	UpdateWasteStatus(ctx context.Context, id primitive.ObjectID, status string) error
+	DeleteWaste(ctx context.Context, id primitive.ObjectID) error
 	CreateRequest(ctx context.Context, req *CollectionRequest) error
 	// Demo verisi oluşturmak için (Harita noktaları boş kalmasın diye)
 	SeedPoints(ctx context.Context) error
+	SeedWastes(ctx context.Context) error
+
+	// --- YENİ EKLENEN METODLAR (NOKTA YÖNETİMİ) ---
+	CreatePoint(ctx context.Context, point *CollectionPoint) error
+	UpdatePoint(ctx context.Context, id primitive.ObjectID, point *CollectionPoint) error
+	DeletePoint(ctx context.Context, id primitive.ObjectID) error
 }
 
 type WasteService interface {
 	UploadAndAnalyze(ctx context.Context, userID string, fileHeader interface{}, description string) (*Waste, error)
 	GetCollectionPoints(ctx context.Context) ([]*CollectionPoint, error)
 	CreateCollectionRequest(ctx context.Context, userID, wasteID, pointID string) (*CollectionRequest, error)
+	GetWastes(ctx context.Context) ([]*Waste, error)
+	UpdateWasteStatus(ctx context.Context, wasteID, status string) error
+	DeleteWaste(ctx context.Context, wasteID string) error
+
+	// --- YENİ EKLENEN METODLAR (NOKTA YÖNETİMİ) ---
+	CreatePoint(ctx context.Context, point *CollectionPoint) error
+	UpdatePoint(ctx context.Context, pointID string, point *CollectionPoint) error
+	DeletePoint(ctx context.Context, pointID string) error
 }

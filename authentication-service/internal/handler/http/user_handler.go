@@ -4,6 +4,7 @@ import (
 	"authentication-service/internal/domain"
 	"net/http"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 )
 
@@ -24,6 +25,8 @@ func (h *UserHandler) RegisterRoutes(e *echo.Echo) {
 // GetAll godoc
 // @Summary Tüm Kullanıcıları Getir
 // @Description Veritabanındaki tüm kullanıcıları adresleriyle birlikte listeler.
+// Admin kullanıcılar aktif/pasif tüm kullanıcıları görebilir.
+// Normal kullanıcılar sadece aktif kullanıcıları görebilir.
 // @Tags Users
 // @Accept json
 // @Produce json
@@ -32,10 +35,36 @@ func (h *UserHandler) RegisterRoutes(e *echo.Echo) {
 // @Failure 500 {object} map[string]string
 // @Router /users [get]
 func (h *UserHandler) GetAll(c echo.Context) error {
+	// JWT token'dan kullanıcı bilgilerini al
+	token := c.Get("user")
+	var userRole string = "user" // Default
+
+	if token != nil {
+		if jwtToken, ok := token.(*jwt.Token); ok {
+			if claims, ok := jwtToken.Claims.(jwt.MapClaims); ok {
+				if role, ok := claims["role"].(string); ok {
+					userRole = role
+				}
+			}
+		}
+	}
+
 	users, err := h.service.GetAll(c.Request().Context())
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
+
+	// Normal user'lar sadece aktif kullanıcıları görebilir
+	if userRole != "admin" {
+		var activeUsers []*domain.User
+		for _, user := range users {
+			if user.Active && user.DeletedAt == nil {
+				activeUsers = append(activeUsers, user)
+			}
+		}
+		users = activeUsers
+	}
+
 	return c.JSON(http.StatusOK, users)
 }
 
@@ -110,19 +139,59 @@ func (h *UserHandler) Update(c echo.Context) error {
 }
 
 // Delete godoc
-// @Summary Kullanıcı Sil
-// @Description Verilen ID'ye sahip kullanıcıyı siler.
+// @Summary Kullanıcı Sil (Soft Delete)
+// @Description Verilen ID'ye sahip kullanıcıyı soft delete yapar (adresleri korunur).
 // @Tags Users
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "User ID"
-// @Success 204
+// @Success 200 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /users/{id} [delete]
+// @Router /admin/users/{id} [delete]
 func (h *UserHandler) Delete(c echo.Context) error {
 	id := c.Param("id")
 	if err := h.service.Delete(c.Request().Context(), id); err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
-	return c.JSON(http.StatusNoContent, nil)
+	return c.JSON(http.StatusOK, map[string]string{"message": "user deleted"})
+}
+
+// ChangeRole godoc
+// @Summary Kullanıcı Rolü Değiştir
+// @Description Admin tarafından kullanıcının rolü değiştirilebilir.
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User ID"
+// @Param request body map[string]string true "Role Request {\"role\": \"admin\" or \"user\"}"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Router /admin/users/{id}/role [put]
+func (h *UserHandler) ChangeRole(c echo.Context) error {
+	id := c.Param("id")
+	var req map[string]string
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid payload"})
+	}
+
+	role, ok := req["role"]
+	if !ok || (role != "admin" && role != "user") {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid role. must be 'admin' or 'user'"})
+	}
+
+	// UserService'den GetAndChangeRole veya UpdateRole metodunu kullan
+	// Şimdilik sadece Update çağıracağız ve service'de role'ü değiştireceğiz
+	user, err := h.service.Get(c.Request().Context(), id)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "user not found"})
+	}
+
+	user.Role = role
+	if err := h.service.Update(c.Request().Context(), id, user); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "role updated"})
 }
