@@ -56,7 +56,18 @@ router.post('/risk-degree', async (req, res, next) => {
             });
         }
 
-        const analysisData = await geminiService.analyzeImage(pathInput);
+        // Convert relative path to absolute path in container
+        // ./uploads/file.jpg -> /app/uploads/file.jpg
+        let imagePath = pathInput;
+        if (pathInput.startsWith('./uploads/')) {
+            imagePath = pathInput.replace('./uploads/', '/app/uploads/');
+        } else if (pathInput.startsWith('uploads/')) {
+            imagePath = '/app/' + pathInput;
+        }
+        
+        console.log("Resolved path:", imagePath);
+
+        const analysisData = await geminiService.analyzeImage(imagePath);
 
         res.status(200).json({
             success: true,

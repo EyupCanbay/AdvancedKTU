@@ -33,7 +33,7 @@ func (s *wasteService) UploadAndAnalyze(ctx context.Context, userID string, file
 	wd, _ := os.Getwd()
 	fmt.Println("Çalışma Dizini:", wd)
 
-	uploadDir := "../../../waste-service/upload"
+	uploadDir := "./uploads"
 	if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
 		return nil, fmt.Errorf("klasör oluşturulamadı: %v", err)
 	}
