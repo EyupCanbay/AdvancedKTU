@@ -1,135 +1,135 @@
-version: "3.8"
+# version: "3.8"
 
-services:
-  # MongoDB - Shared database for authentication and waste services
-  mongo:
-    image: mongo:6.0
-    container_name: ktu_mongo
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
-      MONGO_INITDB_DATABASE: auth_db
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - ktu_network
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+# services:
+#   # MongoDB - Shared database for authentication and waste services
+#   mongo:
+#     image: mongo:6.0
+#     container_name: ktu_mongo
+#     environment:
+#       MONGO_INITDB_ROOT_USERNAME: admin
+#       MONGO_INITDB_ROOT_PASSWORD: password123
+#       MONGO_INITDB_DATABASE: auth_db
+#     ports:
+#       - "27017:27017"
+#     volumes:
+#       - mongo_data:/data/db
+#     networks:
+#       - ktu_network
+#     healthcheck:
+#       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
 
-  # Authentication Service
-  auth-service:
-    build:
-      context: ./authentication-service
-      dockerfile: Dockerfile
-    container_name: ktu_auth_service
-    environment:
-      MONGO_URI: mongodb://admin:password123@mongo:27017
-      DB_NAME: auth_db
-      PORT: 8080
-      JWT_SECRET: super_secret_key_change_me
-    ports:
-      - "8080:8080"
-    depends_on:
-      mongo:
-        condition: service_healthy
-    networks:
-      - ktu_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/swagger/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+#   # Authentication Service
+#   auth-service:
+#     build:
+#       context: ./authentication-service
+#       dockerfile: Dockerfile
+#     container_name: ktu_auth_service
+#     environment:
+#       MONGO_URI: mongodb://admin:password123@mongo:27017
+#       DB_NAME: auth_db
+#       PORT: 8080
+#       JWT_SECRET: super_secret_key_change_me
+#     ports:
+#       - "8080:8080"
+#     depends_on:
+#       mongo:
+#         condition: service_healthy
+#     networks:
+#       - ktu_network
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8080/swagger/"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
 
-  # Waste Service
-  waste-service:
-    build:
-      context: ./waste-service
-      dockerfile: Dockerfile
-    container_name: ktu_waste_service
-    environment:
-      PORT: 8081
-      MONGO_URI: mongodb://admin:password123@mongo:27017
-      DB_NAME: waste_db
-      AUTH_SERVICE_URL: http://auth-service:8080
-      AI_SERVICE_URL: http://ai-service:3000/risk-degree
-    ports:
-      - "8081:8081"
-    depends_on:
-      auth-service:
-        condition: service_healthy
-    volumes:
-      - ./waste-service/uploads:/app/uploads
-    networks:
-      - ktu_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/api/wastes"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+#   # Waste Service
+#   waste-service:
+#     build:
+#       context: ./waste-service
+#       dockerfile: Dockerfile
+#     container_name: ktu_waste_service
+#     environment:
+#       PORT: 8081
+#       MONGO_URI: mongodb://admin:password123@mongo:27017
+#       DB_NAME: waste_db
+#       AUTH_SERVICE_URL: http://auth-service:8080
+#       AI_SERVICE_URL: http://ai-service:3000/risk-degree
+#     ports:
+#       - "8081:8081"
+#     depends_on:
+#       auth-service:
+#         condition: service_healthy
+#     volumes:
+#       - ./waste-service/uploads:/app/uploads
+#     networks:
+#       - ktu_network
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8081/api/wastes"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
 
-  # AI Service
-  ai-service:
-    build:
-      context: ./ai_service
-      dockerfile: Dockerfile
-    container_name: ktu_ai_service
-    environment:
-      PORT: 3000
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-your-api-key-here}
-      NODE_ENV: development
-    ports:
-      - "3000:3000"
-    networks:
-      - ktu_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+#   # AI Service
+#   ai-service:
+#     build:
+#       context: ./ai_service
+#       dockerfile: Dockerfile
+#     container_name: ktu_ai_service
+#     environment:
+#       PORT: 3000
+#       GEMINI_API_KEY: ${GEMINI_API_KEY:-your-api-key-here}
+#       NODE_ENV: development
+#     ports:
+#       - "3000:3000"
+#     networks:
+#       - ktu_network
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
 
-  # Admin Dashboard
-  admin:
-    build:
-      context: ./admin
-      dockerfile: Dockerfile
-    container_name: ktu_admin
-    environment:
-      VITE_API_BASE_URL: http://localhost:8080
-    ports:
-      - "3001:3001"
-    depends_on:
-      - auth-service
-    networks:
-      - ktu_network
-    volumes:
-      - ./admin/src:/app/src
+#   # Admin Dashboard
+#   admin:
+#     build:
+#       context: ./admin
+#       dockerfile: Dockerfile
+#     container_name: ktu_admin
+#     environment:
+#       VITE_API_BASE_URL: http://localhost:8080
+#     ports:
+#       - "3001:3001"
+#     depends_on:
+#       - auth-service
+#     networks:
+#       - ktu_network
+#     volumes:
+#       - ./admin/src:/app/src
 
-  # Frontend Application
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: ktu_frontend
-    environment:
-      VITE_API_BASE_URL: http://localhost:8080
-    ports:
-      - "5173:5173"
-    depends_on:
-      - auth-service
-      - waste-service
-    networks:
-      - ktu_network
-    volumes:
-      - ./frontend/src:/app/src
+#   # Frontend Application
+#   frontend:
+#     build:
+#       context: ./frontend
+#       dockerfile: Dockerfile
+#     container_name: ktu_frontend
+#     environment:
+#       VITE_API_BASE_URL: http://localhost:8080
+#     ports:
+#       - "5173:5173"
+#     depends_on:
+#       - auth-service
+#       - waste-service
+#     networks:
+#       - ktu_network
+#     volumes:
+#       - ./frontend/src:/app/src
 
-volumes:
-  mongo_data:
+# volumes:
+#   mongo_data:
 
-networks:
-  ktu_network:
-    driver: bridge
+# networks:
+#   ktu_network:
+#     driver: bridge
