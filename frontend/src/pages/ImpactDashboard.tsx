@@ -2,16 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Footer } from '../components/layout/Footer';
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 const origin = (uri: string) => `${location.protocol}//${location.hostname}${uri}`;
 
-=======
-// Etki Analizi Veri Yapısı
->>>>>>> Stashed changes
-=======
-// Etki Analizi Veri Yapısı
->>>>>>> Stashed changes
 interface ImpactAnalysis {
   totalCO2Saved: number;
   totalEnergyEquivalent: number;
@@ -37,7 +29,7 @@ const AnimatedCounter = ({ value, duration = 1500, decimals = 0 }: { value: numb
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / duration, 1);
       setCount(progress * endValue);
-      
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       }
@@ -92,17 +84,9 @@ export const ImpactDashboard = () => {
       {/* MODERN NAVBAR */}
       <nav className="sticky top-0 z-50 glass-panel border-b border-border-dark px-6 py-4 backdrop-blur-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-          <div className="flex items-center gap-3">
-            <button
-=======
-=======
->>>>>>> Stashed changes
           <div className="flex items-center gap-4">
             {/* ANA SAYFAYA DÖN BUTONU */}
-            <button 
->>>>>>> Stashed changes
+            <button
               onClick={() => navigate('/')}
               className="group flex items-center gap-3 px-4 py-2 rounded-xl bg-surface-dark border border-border-dark text-gray-300 hover:text-white hover:bg-white/5 transition-all"
             >
@@ -259,25 +243,25 @@ const ImpactCard = ({ title, value, unit, icon, color, description }: any) => {
 };
 
 const SecondaryMetric = ({ icon, value, label, color }: any) => {
-    const colors: any = {
-        purple: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
-        yellow: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400',
-        orange: 'bg-orange-500/10 border-orange-500/20 text-orange-400',
-        red: 'bg-red-500/10 border-red-500/20 text-red-400'
-    };
-    return (
-        <div className={`glass-panel border ${colors[color]} rounded-2xl p-6 text-center group hover:bg-white/5 transition-all`}>
-            <span className="material-symbols-outlined text-4xl mb-3 block group-hover:scale-110 transition-transform">{icon}</span>
-            <div className="text-3xl font-black text-white mb-1 tracking-tight">{value}</div>
-            <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">{label}</div>
-        </div>
-    );
+  const colors: any = {
+    purple: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
+    yellow: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400',
+    orange: 'bg-orange-500/10 border-orange-500/20 text-orange-400',
+    red: 'bg-red-500/10 border-red-500/20 text-red-400'
+  };
+  return (
+    <div className={`glass-panel border ${colors[color]} rounded-2xl p-6 text-center group hover:bg-white/5 transition-all`}>
+      <span className="material-symbols-outlined text-4xl mb-3 block group-hover:scale-110 transition-transform">{icon}</span>
+      <div className="text-3xl font-black text-white mb-1 tracking-tight">{value}</div>
+      <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">{label}</div>
+    </div>
+  );
 };
 
 const ComparisonCard = ({ icon, value, label, description }: any) => (
   <div className="text-center group p-6 rounded-3xl hover:bg-white/5 transition-colors">
     <div className="size-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mx-auto mb-6 group-hover:scale-110 transition-transform">
-        <span className="material-symbols-outlined text-4xl">{icon}</span>
+      <span className="material-symbols-outlined text-4xl">{icon}</span>
     </div>
     <div className="text-4xl font-black text-white mb-2 tracking-tighter">{value}</div>
     <div className="text-xs font-black text-primary mb-4 uppercase tracking-[0.2em]">{label}</div>
