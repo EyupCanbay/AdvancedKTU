@@ -13,7 +13,7 @@ type Config struct {
 
 func LoadConfig() *Config {
 	return &Config{
-		MongoURI:  getEnv("MONGO_URI", "mongodb://admin:password123@localhost:27017"),
+		MongoURI:  getEnv("MONGO_URI", "mongodb+srv://tesodevmongodb:<db_password>@cluster0.ajddxq7.mongodb.net/?appName=Cluster0"),
 		DbName:    getEnv("DB_NAME", "auth_db"),
 		Port:      getEnv("PORT", "8080"),
 		JWTSecret: getEnv("JWT_SECRET", "super_secret_key_change_me"), 

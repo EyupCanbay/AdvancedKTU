@@ -13,7 +13,7 @@ type Config struct {
 func LoadConfig() *Config {
 	return &Config{
 		Port:           getEnv("PORT", "8081"), // Auth 8080 ise bu 8081 olsun
-		MongoURI:       getEnv("MONGO_URI", "mongodb://admin:password123@localhost:27017"),
+		MongoURI:       getEnv("MONGO_URI", "mongodb+srv://tesodevmongodb:<db_password>@cluster0.ajddxq7.mongodb.net/?appName=Cluster0"),
 		DbName:         getEnv("DB_NAME", "waste_db"),
 		AuthServiceURL: getEnv("AUTH_SERVICE_URL", "http://localhost:8080"),
 		AIServiceURL:   getEnv("AI_SERVICE_URL", "http://localhost:3000/risk-degree"),
