@@ -1,4 +1,4 @@
-# Docker Build Rehberi - AdvancedKTU
+<!-- # Docker Build Rehberi - AdvancedKTU
 
 ## ⚠️ Hata Çözümü
 
@@ -262,8 +262,7 @@ docker ps -a | grep advancedktu
 # Boyut optimizasyonu
 docker build \
   --target authentication-service \
-  -t advancedktu-auth:1.0.0 \
-  --build-arg BUILDKIT_INLINE_CACHE=1 \
+  -t advancedktu-auth:1.0.0 
   .
 
 # Yayınlama
@@ -337,4 +336,4 @@ docker rm <container-id>
 **Sorular?** Docker logs'ları kontrol edin:
 ```bash
 docker logs <container-id> --tail 50 --follow
-```
+``` -->
