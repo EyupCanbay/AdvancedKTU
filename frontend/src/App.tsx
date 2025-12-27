@@ -5,8 +5,11 @@ import RegisterPage from './pages/RegisterPage'; // Yeni eklenen
 import CentersPage from './pages/CentersPage';
 import { MilestonePage } from './pages/MilestonePage';
 import { SelectCenterPage } from './pages/SelectCenterPage';
-import ImpactDashboard from './pages/ImpactDashboard';
 import { AboutPage } from './pages/AboutPage';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { TermsOfServicePage } from './pages/TermsOfServicePage';
+import { ContactPage } from './pages/ContactPage';
+import { ImpactDashboard } from './pages/ImpactDashboard';
 
 function App() {
   return (
@@ -19,7 +22,9 @@ function App() {
       <Route path="/centers" element={<CentersPage />} />
       <Route path="/impact" element={<ImpactDashboard />} /> {/* Gerçek Zamanlı Etki Analizi */}
       <Route path="/about" element={<AboutPage />} />
-<Route path="/about" element={<AboutPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms" element={<TermsOfServicePage />} />
+      <Route path="/contact" element={<ContactPage />} />
     </Routes>
   );
 }

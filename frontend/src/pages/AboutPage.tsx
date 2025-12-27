@@ -2,6 +2,8 @@ import React from 'react';
 import { Navbar } from '../components/layout/Navbar';
 import { motion, useMotionValue, useTransform, animate, useInView } from "framer-motion";
 import { useEffect, useRef } from "react";
+import { Link } from 'react-router-dom'; // Link import edildiğinden emin olun
+import { Footer } from '../components/layout/Footer'; // Footer yolu kontrol edilmeli
 import cagatayImg from '../../src/assets/impact/cagatay.jpeg';
 import eyupImg from '../../src/assets/impact/eyup.jpeg';
 import erenImg from '../../src/assets/impact/eren.jpeg';
@@ -136,6 +138,12 @@ export const AboutPage = () => {
           </div>
         </section>
       </main>
+      <div className="max-w-[900px] mx-auto w-full px-4 md:px-10 mb-16">
+        
+      </div>
+
+      {/* FOOTER BURAYA EKLENDİ */}
+      <Footer />
     </div>
   );
 };
