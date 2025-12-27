@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const origin = (uri: string) => `${location.protocol}//${location.hostname}${uri}`;
+
 interface ImpactAnalysis {
   totalCO2Saved: number;
   totalEnergyEquivalent: number;
@@ -28,7 +30,7 @@ export const ImpactDashboard = () => {
 
   const fetchImpactData = async () => {
     try {
-      const response = await fetch('http://localhost:8081/api/impact-analysis');
+      const response = await fetch(origin(':8081/api/impact-analysis'));
       if (response.ok) {
         const data = await response.json();
         setImpact(data);
@@ -54,7 +56,7 @@ export const ImpactDashboard = () => {
       <nav className="sticky top-0 z-50 glass-panel border-b border-border-dark px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => navigate('/')}
               className="size-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center text-white font-bold hover:scale-110 transition-transform"
             >

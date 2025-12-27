@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+const origin = (uri: string) => `${location.protocol}//${location.hostname}${uri}`;
+
 const RegisterPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  
+
   // Backend RegisterRequest yapısına uygun state
   const [formData, setFormData] = useState({
     fullname: "",
@@ -54,7 +56,7 @@ const RegisterPage = () => {
     };
 
     try {
-      const response = await fetch('http://localhost:8080/auth/register', {
+      const response = await fetch(origin(':8080/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -80,30 +82,30 @@ const RegisterPage = () => {
       <main className="flex-grow flex items-center justify-center relative px-4 py-24 w-full">
         <div className="glass-panel w-full max-w-[520px] rounded-2xl p-8 relative z-10">
           <h2 className="text-2xl font-bold text-center mb-6">Kayıt Ol</h2>
-          
+
           {error && <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg mb-4 text-sm">{error}</div>}
 
           <form className="space-y-4" onSubmit={handleSubmit}>
-            <input className="w-full bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none focus:border-primary" 
+            <input className="w-full bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none focus:border-primary"
               id="fullname" placeholder="Ad Soyad" type="text" onChange={handleChange} required />
-            
-            <input className="w-full bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none focus:border-primary" 
+
+            <input className="w-full bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none focus:border-primary"
               id="email" placeholder="E-posta" type="email" onChange={handleChange} required />
 
             {/* Adres Bölümü - Backend zorunlu kıldığı için eklendi */}
             <div className="grid grid-cols-2 gap-4">
-              <input className="bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none" 
+              <input className="bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none"
                 id="city" placeholder="Şehir" onChange={handleChange} required />
-              <input className="bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none" 
+              <input className="bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none"
                 id="district" placeholder="İlçe" onChange={handleChange} required />
             </div>
-            <input className="w-full bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none" 
+            <input className="w-full bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none"
               id="full_address" placeholder="Tam Adres (Sokak, No...)" onChange={handleChange} required />
 
             <div className="grid grid-cols-2 gap-4">
-              <input className="bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none" 
+              <input className="bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none"
                 id="password" placeholder="Şifre" type="password" onChange={handleChange} required />
-              <input className="bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none" 
+              <input className="bg-[#152A26] border border-[#244447] p-3.5 rounded-xl outline-none"
                 id="password_confirm" placeholder="Şifre Tekrar" type="password" onChange={handleChange} required />
             </div>
 

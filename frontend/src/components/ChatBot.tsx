@@ -42,7 +42,7 @@ export const ChatBot = () => {
 
     try {
       // Call CarboBot API
-      const response = await fetch('http://localhost:8083/api/chat', {
+      const response = await fetch(origin(`:8083/api/chat`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,18 +58,18 @@ export const ChatBot = () => {
       }
 
       const data = await response.json();
-      
+
       const botResponse: Message = {
         role: 'assistant',
         content: data.message,
         timestamp: new Date()
       };
-      
+
       setMessages(prev => [...prev, botResponse]);
       setIsTyping(false);
     } catch (error) {
       console.error('Chat error:', error);
-      
+
       // Fallback to local response if API fails
       const botResponse: Message = {
         role: 'assistant',
@@ -83,70 +83,70 @@ export const ChatBot = () => {
 
   const getBotResponse = (input: string): string => {
     const lower = input.toLowerCase();
-    
+
     // Selamlaşma
     if (lower.match(/^(merhaba|selam|hey|hi|hello|günaydın|iyi günler)$/)) {
       return '👋 Merhaba! Ben CarboBot, size e-atık yönetimi ve çevresel etki konusunda yardımcı olabilirim. Ne öğrenmek istersiniz?';
     }
-    
+
     // Konum ve toplama noktaları
-    if (lower.includes('nerede') || lower.includes('yakın') || lower.includes('toplama') || 
-        lower.includes('nokta') || lower.includes('merkez') || lower.includes('adres') ||
-        lower.includes('harita') || lower.includes('konum')) {
+    if (lower.includes('nerede') || lower.includes('yakın') || lower.includes('toplama') ||
+      lower.includes('nokta') || lower.includes('merkez') || lower.includes('adres') ||
+      lower.includes('harita') || lower.includes('konum')) {
       return '📍 Size en yakın toplama noktalarını bulmak için haritaya bakabilirsiniz. Şu anda sistemde kayıtlı onlarca toplama merkezi var. İsterseniz bulunduğunuz bölgeyi söylerseniz size yardımcı olabilirim!';
     }
-    
+
     // Atık bildirme
-    if (lower.includes('nasıl') || lower.includes('bildir') || lower.includes('süreç') || 
-        lower.includes('yükle') || lower.includes('fotoğraf') || lower.includes('analiz') ||
-        lower.includes('başlat')) {
+    if (lower.includes('nasıl') || lower.includes('bildir') || lower.includes('süreç') ||
+      lower.includes('yükle') || lower.includes('fotoğraf') || lower.includes('analiz') ||
+      lower.includes('başlat')) {
       return '📱 E-atık bildirmek çok kolay!\n\n1️⃣ "Atık Bildir" butonuna tıklayın\n2️⃣ Cihazınızın fotoğrafını yükleyin\n3️⃣ AI analizi bekleyin (30 saniye)\n4️⃣ Size en yakın toplama noktasını seçin\n5️⃣ Tamamlandı! 🎉\n\nHemen denemek ister misiniz?';
     }
-    
+
     // CO2, karbon, çevresel etki
-    if (lower.includes('co2') || lower.includes('karbon') || lower.includes('etki') || 
-        lower.includes('tasarruf') || lower.includes('çevre') || lower.includes('katkı') ||
-        lower.includes('istatistik') || lower.includes('su') || lower.includes('enerji')) {
+    if (lower.includes('co2') || lower.includes('karbon') || lower.includes('etki') ||
+      lower.includes('tasarruf') || lower.includes('çevre') || lower.includes('katkı') ||
+      lower.includes('istatistik') || lower.includes('su') || lower.includes('enerji')) {
       return '🌱 Harika soru! Toplam çevresel etkimizi görmek için "Etki Dashboard" sayfasını ziyaret edebilirsiniz.\n\n📊 Şu anda görüntüleyebileceğiniz veriler:\n• CO₂ tasarrufu (kg)\n• Su korunması (litre)\n• Enerji tasarrufu (kWh)\n• Ağaç eşdeğeri\n• Ve daha fazlası!\n\nGerçek zamanlı güncelleniyoruz! 🔄';
     }
-    
+
     // Değer, fiyat
-    if (lower.includes('değer') || lower.includes('fiyat') || lower.includes('kaç') || 
-        lower.includes('para') || lower.includes('ücret') || lower.includes('kazanç') ||
-        lower.includes('ne kadar')) {
+    if (lower.includes('değer') || lower.includes('fiyat') || lower.includes('kaç') ||
+      lower.includes('para') || lower.includes('ücret') || lower.includes('kazanç') ||
+      lower.includes('ne kadar')) {
       return '💰 Cihazınızın değerini öğrenmek için fotoğraf yükleyin!\n\nAI sistemimiz:\n• Cihaz türünü tanır\n• Durumunu analiz eder\n• Piyasa değerini hesaplar\n• Geri dönüşüm değerini gösterir\n\n📱 iPhone, laptop, tablet gibi cihazlar genelde 250-3000₺ arasında değer alıyor. Hemen deneyin!';
     }
-    
+
     // E-atık nedir
-    if (lower.includes('e-atık') || lower.includes('elektronik') || lower.includes('nedir') || 
-        lower.includes('ne demek') || lower.includes('tanım')) {
+    if (lower.includes('e-atık') || lower.includes('elektronik') || lower.includes('nedir') ||
+      lower.includes('ne demek') || lower.includes('tanım')) {
       return '🌍 E-atık, kullanım ömrünü tamamlamış elektronik cihazlardır.\n\n📱 Örnekler:\n• Telefonlar, tabletler\n• Bilgisayarlar, laptoplar\n• Televizyonlar\n• Akıllı saatler\n• Ev aletleri\n\n⚠️ Tehlikeleri:\n• Ağır metaller (kurşun, cıva)\n• Toprak ve su kirliliği\n• İnsan sağlığına zarar\n• Doğada 1000+ yıl kalır\n\n✅ Çözüm: Güvenli geri dönüşüm!';
     }
-    
+
     // Yardım
-    if (lower.includes('yardım') || lower.includes('help') || lower.includes('ne yapabilir') || 
-        lower.includes('komut') || lower.includes('özellik')) {
+    if (lower.includes('yardım') || lower.includes('help') || lower.includes('ne yapabilir') ||
+      lower.includes('komut') || lower.includes('özellik')) {
       return '🤖 Size şu konularda yardımcı olabilirim:\n\n📍 Konum: "En yakın toplama noktası nerede?"\n♻️ Süreç: "Nasıl atık bildirebilirim?"\n🌱 Etki: "CO₂ tasarrufumuz ne kadar?"\n💰 Değer: "Cihazımın değeri ne kadar?"\n🎓 Eğitim: "E-atık nedir?"\n\nDaha fazla soru sormaktan çekinmeyin! 😊';
     }
-    
+
     // Sorun, hata
-    if (lower.includes('sorun') || lower.includes('hata') || lower.includes('çalışmıyor') || 
-        lower.includes('problem') || lower.includes('bug')) {
+    if (lower.includes('sorun') || lower.includes('hata') || lower.includes('çalışmıyor') ||
+      lower.includes('problem') || lower.includes('bug')) {
       return '😔 Üzgünüm, bir sorun mu yaşıyorsunuz?\n\n📝 Lütfen sorunu detaylı anlatır mısınız?\n• Ne yapmaya çalışıyordunuz?\n• Hangi adımda hata oluştu?\n• Hata mesajı neydi?\n\nAlternatif İletişim:\n📧 support@ewasteheroes.com\n💬 0850 xxx xx xx\n\nSize yardımcı olmak için buradayım!';
     }
-    
+
     // Rozet, puan, liderlik
-    if (lower.includes('rozet') || lower.includes('puan') || lower.includes('lider') || 
-        lower.includes('sıralama') || lower.includes('başarı') || lower.includes('ödül')) {
+    if (lower.includes('rozet') || lower.includes('puan') || lower.includes('lider') ||
+      lower.includes('sıralama') || lower.includes('başarı') || lower.includes('ödül')) {
       return '🏆 Gamification sistemimiz çok heyecan verici!\n\n🎖️ Kazanabileceğiniz rozetler:\n• İlk Adım (1 atık)\n• Yeşil Kahraman (5 atık)\n• Çevre Savunucusu (10 atık)\n• Dünya Kurtaran (50 atık)\n\n📊 Liderlik tablosunda yerinizi alın ve diğer kullanıcılarla yarışın!\n\nHer atık bildirimi puanınızı artırır! 🚀';
     }
-    
+
     // Güvenlik, veri
-    if (lower.includes('güvenli') || lower.includes('veri') || lower.includes('gizli') || 
-        lower.includes('kişisel')) {
+    if (lower.includes('güvenli') || lower.includes('veri') || lower.includes('gizli') ||
+      lower.includes('kişisel')) {
       return '🔒 Güvenliğiniz bizim önceliğimiz!\n\n✅ Cihazlarınızdaki veriler:\n• Fiziksel olarak yok edilir\n• Profesyonel ekipler tarafından temizlenir\n• Geri dönüşüm öncesi silinir\n\n🛡️ Kişisel bilgileriniz:\n• Şifrelenmiş olarak saklanır\n• 3. taraflarla paylaşılmaz\n• KVKK\'ya uygun işlenir\n\nVerileriniz güvende!';
     }
-    
+
     // Genel fallback - daha spesifik
     return `🤔 "${input}" hakkında size nasıl yardımcı olabilirim?\n\n💡 Bunları sorabilirsiniz:\n• "En yakın toplama noktası nerede?"\n• "Nasıl atık bildirebilirim?"\n• "CO₂ tasarrufumuz ne kadar?"\n• "Telefonumun değeri ne kadar?"\n• "E-atık nedir?"\n\nYa da başka bir şey mi öğrenmek istiyorsunuz? 😊`;
   };
@@ -168,9 +168,8 @@ export const ChatBot = () => {
       {/* Chat Button - Her zaman en üstte */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-6 right-6 z-[150] size-16 rounded-full bg-gradient-to-br from-primary to-accent text-white shadow-2xl hover:scale-110 transition-all duration-300 flex items-center justify-center ${
-          isOpen ? 'rotate-0' : ''
-        }`}
+        className={`fixed bottom-6 right-6 z-[150] size-16 rounded-full bg-gradient-to-br from-primary to-accent text-white shadow-2xl hover:scale-110 transition-all duration-300 flex items-center justify-center ${isOpen ? 'rotate-0' : ''
+          }`}
         aria-label="Chat with CarboBot"
       >
         <span className={`material-symbols-outlined text-3xl transition-transform duration-300 ${isOpen ? 'rotate-45' : ''}`}>
@@ -210,22 +209,20 @@ export const ChatBot = () => {
                 className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
               >
                 <div
-                  className={`size-8 rounded-full flex items-center justify-center shrink-0 ${
-                    msg.role === 'user'
-                      ? 'bg-primary/20 text-primary'
-                      : 'bg-accent/20 text-accent'
-                  }`}
+                  className={`size-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user'
+                    ? 'bg-primary/20 text-primary'
+                    : 'bg-accent/20 text-accent'
+                    }`}
                 >
                   <span className="material-symbols-outlined text-lg">
                     {msg.role === 'user' ? 'person' : 'smart_toy'}
                   </span>
                 </div>
                 <div
-                  className={`max-w-[75%] rounded-2xl px-4 py-3 ${
-                    msg.role === 'user'
-                      ? 'bg-primary text-white rounded-tr-sm'
-                      : 'bg-white/5 text-gray-200 rounded-tl-sm'
-                  }`}
+                  className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.role === 'user'
+                    ? 'bg-primary text-white rounded-tr-sm'
+                    : 'bg-white/5 text-gray-200 rounded-tl-sm'
+                    }`}
                 >
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   <span className="text-[10px] opacity-60 mt-1 block">

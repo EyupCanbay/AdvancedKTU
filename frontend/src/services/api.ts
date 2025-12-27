@@ -2,7 +2,8 @@
 
 import type { Device } from '../types/device';
 
-const WASTE_API = 'http://localhost:8081/api';
+const origin = (uri: string) => `${location.protocol}//${location.hostname}${uri}`;
+const WASTE_API = origin(':8081/api');
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token');
@@ -24,7 +25,7 @@ export const analyzeWasteImage = async (file: File) => {
   try {
     const token = localStorage.getItem('token');
     console.log('🔑 [API] Token kontrol:', token ? '✅ Mevcut' : '⚠️ Yok (guest olarak devam)');
-    
+
     const formData = new FormData();
     formData.append('image', file);
     console.log('📦 [API] FormData oluşturuldu');
@@ -39,7 +40,7 @@ export const analyzeWasteImage = async (file: File) => {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(apiUrl, { 
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: headers,
       body: formData,
@@ -61,10 +62,10 @@ export const analyzeWasteImage = async (file: File) => {
       });
       throw new Error(`Servis Hatası (${response.status}): ${errorText}`);
     }
-    
+
     const jsonData = await response.json();
     console.log('✅ [API] JSON parse başarılı:', jsonData);
-    
+
     return jsonData;
   } catch (error: any) {
     console.error('💥 [API] KRITIK HATA:', {
@@ -73,13 +74,13 @@ export const analyzeWasteImage = async (file: File) => {
       stack: error.stack,
       error: error
     });
-    
+
     // Network hatası mı kontrol et
     if (error instanceof TypeError && error.message.includes('fetch')) {
       console.error('🌐 [API] Network hatası - Backend çalışmıyor olabilir!');
       throw new Error('Backend servisine bağlanılamadı. Lütfen servislerin çalıştığından emin olun.');
     }
-    
+
     throw error;
   }
 };
@@ -88,18 +89,18 @@ export const analyzeWasteImage = async (file: File) => {
  * Çoklu cihaz açıklamasını ve konumunu backend'e gönder
  * Dependency Inversion Principle: Interface üzerinden çalışır
  */
-export const submitMultipleDevices = async (data: { 
+export const submitMultipleDevices = async (data: {
   description: string;
   latitude: number;
   longitude: number;
 }): Promise<any> => {
   console.log('🔧 [API] submitMultipleDevices başladı');
   console.log('📋 [API] Payload:', data);
-  
+
   try {
     const token = localStorage.getItem('token');
     console.log('🔑 [API] Token:', token ? '✅ Mevcut' : '⚠️ Yok (guest olarak devam)');
-    
+
     const payload = {
       description: data.description,
       latitude: data.latitude,
@@ -114,7 +115,7 @@ export const submitMultipleDevices = async (data: {
     const headers: HeadersInit = {
       'Content-Type': 'application/json'
     };
-    
+
     // Token varsa ekle, yoksa guest olarak devam et
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
