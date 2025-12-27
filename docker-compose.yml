@@ -67,7 +67,7 @@ services:
     networks:
       - ktu_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/api/wastes"]
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/impact-analysis"]
       interval: 10s
       timeout: 5s
       retries: 5
