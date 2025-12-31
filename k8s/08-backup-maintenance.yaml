@@ -1,0 +1,232 @@
+---
+# ============================================================================
+# MongoDB Backup Job - Her gün MongoDB'nin yedeği alınır
+# ============================================================================
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mongodb-backup
+  namespace: advancedktu
+spec:
+  # Her gün saat 02:00'de çalış
+  schedule: "0 2 * * *"
+  
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: default
+          containers:
+            - name: mongodb-backup
+              image: mongo:6.0-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_FILE="/backup/mongodb_backup_$TIMESTAMP.dump"
+                  BACKUP_DIR="/backup"
+                  
+                  echo "Starting MongoDB backup at $TIMESTAMP..."
+                  
+                  # Backup al
+                  mongodump \
+                    --uri="mongodb://admin:KtuMongoDB@password2024@mongodb-service.advancedktu.svc.cluster.local:27017/?authSource=admin" \
+                    --out="$BACKUP_DIR/dump_$TIMESTAMP" \
+                    --gzip
+                  
+                  if [ $? -eq 0 ]; then
+                    echo "✓ Backup successful: dump_$TIMESTAMP"
+                    
+                    # Eski backupları sil (30 günden eski)
+                    find $BACKUP_DIR -maxdepth 1 -name "dump_*" -type d -mtime +30 -exec rm -rf {} \; 2>/dev/null
+                    echo "✓ Old backups cleaned"
+                  else
+                    echo "✗ Backup failed!"
+                    exit 1
+                  fi
+              
+              volumeMounts:
+                - name: backup-volume
+                  mountPath: /backup
+          
+          volumes:
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: backup-pvc
+          
+          restartPolicy: OnFailure
+---
+# ============================================================================
+# Backup PersistentVolumeClaim
+# ============================================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backup-pvc
+  namespace: advancedktu
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: standard
+---
+# ============================================================================
+# Logs Cleanup Job - Eski logları temizle
+# ============================================================================
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: logs-cleanup
+  namespace: advancedktu
+spec:
+  # Her hafta Pazar saat 03:00'te çalış
+  schedule: "0 3 * * 0"
+  
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: logs-cleanup
+              image: alpine:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Starting logs cleanup..."
+                  
+                  # Docker logs'ları temizle (1 aydan eski)
+                  # (minikube/kind'de bu işe yaramayabilir, üretim K8s'te gerekli)
+                  find /var/lib/docker/containers -name "*.log" -mtime +30 -delete
+                  
+                  echo "✓ Logs cleanup completed"
+          
+          restartPolicy: OnFailure
+---
+# ============================================================================
+# Pod Log Rotation - Pod'ların çok log yazmasını kontrol et
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pod-log-config
+  namespace: advancedktu
+data:
+  logrotate.conf: |
+    /var/log/pods/*/*/*.log {
+      rotate 5
+      daily
+      missingok
+      notifempty
+      compress
+      delaycompress
+    }
+---
+# ============================================================================
+# Health Check Job - Servislerin health'ini kontrol et
+# ============================================================================
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: health-check
+  namespace: advancedktu
+spec:
+  # Her 5 dakikada bir çalış
+  schedule: "*/5 * * * *"
+  
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: health-check
+              image: curlimages/curl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "Health Check Report - $(date)"
+                  echo "======================================"
+                  
+                  services=("auth-service:8080" "waste-service:8081" "ai-service:3000" "frontend:5174")
+                  
+                  for service in "${services[@]}"; do
+                    echo "Checking $service..."
+                    if curl -sf "http://$service/" > /dev/null 2>&1; then
+                      echo "✓ $service is healthy"
+                    else
+                      echo "✗ $service is UNHEALTHY"
+                    fi
+                  done
+                  
+                  echo "======================================"
+          
+          restartPolicy: OnFailure
+---
+# ============================================================================
+# PVC Maintenance Job - Storage kullanımını kontrol et
+# ============================================================================
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pvc-maintenance
+  namespace: advancedktu
+spec:
+  # Her gün saat 01:00'de çalış
+  schedule: "0 1 * * *"
+  
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: default
+          containers:
+            - name: pvc-check
+              image: alpine:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "PVC Maintenance Report - $(date)"
+                  echo "======================================"
+                  echo "Checking PVC status and cleanup..."
+                  
+                  # Boş/eski dosyaları temizle
+                  # Waste uploads'da 90 günden eski dosyaları sil
+                  find /mnt/uploads -type f -mtime +90 -delete
+                  echo "✓ Cleaned old upload files"
+                  
+                  echo "======================================"
+          
+          restartPolicy: OnFailure
+---
+# ============================================================================
+# ConfigMap - Maintenance Scripts
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: maintenance-scripts
+  namespace: advancedktu
+data:
+  check-pod-restarts.sh: |
+    #!/bin/sh
+    # Çok restart olan pod'ları bulur
+    echo "Pods with high restart count:"
+    kubectl get pods -n advancedktu -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.containerStatuses[0].restartCount}{"\n"}{end}' | sort -k2 -rn
+  
+  view-service-logs.sh: |
+    #!/bin/sh
+    # Son 100 satır logu göster
+    SERVICE=${1:-auth-service}
+    echo "Last 100 lines of $SERVICE:"
+    kubectl logs -n advancedktu -l app=$SERVICE --tail=100 -f
+  
+  check-pvc-usage.sh: |
+    #!/bin/sh
+    # PVC kullanımını kontrol et
+    echo "PVC Usage Report:"
+    kubectl get pvc -n advancedktu -o wide

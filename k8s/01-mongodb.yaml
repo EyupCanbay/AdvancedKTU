@@ -1,0 +1,230 @@
+---
+# ============================================================================
+# MongoDB ConfigMap - Yapılandırma
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-config
+  namespace: advancedktu
+data:
+  MONGO_INITDB_DATABASE: "auth_db"
+  MONGO_LOG_LEVEL: "info"
+---
+# ============================================================================
+# MongoDB Secret - Şifreler (Gizli veriler)
+# ============================================================================
+# ⚠️ Önemli: Base64 encode edilmiş, üretimde daha güvenli yöntemler kullan (Sealed Secrets, HashiCorp Vault)
+# 
+# Dekodlamak için: echo "KnR1TTBuZ29EQlBAc3N3b3JkMjAyNAo=" | base64 -d
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongodb-secret
+  namespace: advancedktu
+type: Opaque
+data:
+  # KtuMongoDB@password2024
+  MONGO_INITDB_ROOT_USERNAME: YWRtaW4=
+  MONGO_INITDB_ROOT_PASSWORD: S3R1TW9uZ29EQkBAc3N3b3JkMjAyNA==
+---
+# ============================================================================
+# PersistentVolumeClaim - Depolama için
+# ============================================================================
+# Tanım: MongoDB verilerini depolamak için dayanıklı depolama talep eder
+# Kubernetes'te storage class'ı otomatik olarak bunu sağlar
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-pvc
+  namespace: advancedktu
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi  # 10GB depolama
+  storageClassName: standard  # Local Kubernetes için, üretimde: fast, ssd, vb.
+---
+# ============================================================================
+# MongoDB StatefulSet - Ana Database Servisi
+# ============================================================================
+# Tanım: StatefulSet kullanıyoruz çünkü:
+# - Database dayanıklı olmalı (Pod öldürülse de veri kalır)
+# - Network identitesi stable olmalı (mongodb-0, mongodb-1, vs.)
+#
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: advancedktu
+  labels:
+    app: mongodb
+    version: "6.0"
+spec:
+  serviceName: mongodb  # Headless service ismi
+  replicas: 1            # 1 node setup için 1 replik
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      # Security Context
+      securityContext:
+        fsGroup: 999
+        runAsNonRoot: true
+        runAsUser: 999
+      
+      containers:
+        - name: mongodb
+          image: mongo:6.0-alpine
+          imagePullPolicy: IfNotPresent
+          
+          ports:
+            - name: mongodb
+              containerPort: 27017
+              protocol: TCP
+          
+          # Environment Variables
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: MONGO_INITDB_ROOT_USERNAME
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-secret
+                  key: MONGO_INITDB_ROOT_PASSWORD
+            - name: MONGO_INITDB_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: mongodb-config
+                  key: MONGO_INITDB_DATABASE
+          
+          # Volume Mounts
+          volumeMounts:
+            - name: mongodb-data
+              mountPath: /data/db
+            - name: mongodb-config-vol
+              mountPath: /data/configdb
+          
+          # Resource Limits
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          
+          # Health Check
+          livenessProbe:
+            exec:
+              command:
+                - mongo
+                - --eval
+                - "db.adminCommand('ping')"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          readinessProbe:
+            exec:
+              command:
+                - mongo
+                - --eval
+                - "db.adminCommand('ping')"
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          
+          # Security Context
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      
+      # Affinity - Aynı node'da kalması için (1 node setup)
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - mongodb
+                topologyKey: kubernetes.io/hostname
+      
+      terminationGracePeriodSeconds: 30
+
+  # Volume Claim Templates
+  volumeClaimTemplates:
+    - metadata:
+        name: mongodb-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 10Gi
+    - metadata:
+        name: mongodb-config-vol
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 1Gi
+---
+# ============================================================================
+# MongoDB Headless Service - Pod'lara stable DNS adı vermek için
+# ============================================================================
+# Tanım: "mongodb.advancedktu.svc.cluster.local" adresinde erişebilirsin
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  namespace: advancedktu
+  labels:
+    app: mongodb
+spec:
+  clusterIP: None  # Headless service (load balancer yok)
+  selector:
+    app: mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+      protocol: TCP
+---
+# ============================================================================
+# MongoDB Service - Cluster içindeki diğer servicelerin kullanması için
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+  namespace: advancedktu
+  labels:
+    app: mongodb
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+    - name: mongodb
+      port: 27017
+      targetPort: 27017
+      protocol: TCP

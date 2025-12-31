@@ -1,0 +1,105 @@
+---
+# ============================================================================
+# Cert-Manager Installation Helper
+# ============================================================================
+# Bu dosya bilgilendirme amaçlı, manual kurulum için
+# 
+# Kurulum komutları:
+# helm repo add jetstack https://charts.jetstack.io
+# helm repo update
+# helm install cert-manager jetstack/cert-manager \
+#   --namespace cert-manager --create-namespace \
+#   --set installCRDs=true
+#
+# Doğrulama:
+# kubectl get pods -n cert-manager
+#
+
+---
+# ============================================================================
+# ClusterIssuer - Let's Encrypt HTTPS Sertifikaları (Production)
+# ============================================================================
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    # Let's Encrypt Production API (HTTPS için geçerli sertifika)
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@advancedktu.site
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+      # HTTP-01 Challenge (Ingress üzerinden)
+      - http01:
+          ingress:
+            class: nginx
+        selector:
+          dnsNames:
+            - advancedktu.site
+            - www.advancedktu.site
+            - api.advancedktu.site
+            - waste.advancedktu.site
+            - ai.advancedktu.site
+
+---
+# ============================================================================
+# ClusterIssuer - Let's Encrypt Staging (Testing için)
+# ============================================================================
+# Rate limit'ten kaçınmak için deployment test etmede bunu kullan
+# Sertifikalar geçersiz olacak ama otomasyonu test edebilirsin
+#
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    # Let's Encrypt Staging API (sınırsız test, geçersiz sertifika)
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: admin@advancedktu.site
+    privateKeySecretRef:
+      name: letsencrypt-staging-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+
+---
+# ============================================================================
+# Certificate - advancedktu.site için
+# ============================================================================
+# Manual olarak sertifika talebinde bulun
+# (Ingress'te annotation ile otomatik oluşturacak)
+#
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: advancedktu-tls-cert
+  namespace: advancedktu
+spec:
+  secretName: advancedktu-tls-cert
+  duration: 2160h  # 90 days (Let's Encrypt default)
+  renewBefore: 720h  # 30 days (renewal 30 gün öncesinde başla)
+  commonName: advancedktu.site
+  dnsNames:
+    - advancedktu.site
+    - www.advancedktu.site
+    - api.advancedktu.site
+    - waste.advancedktu.site
+    - ai.advancedktu.site
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+
+---
+# ============================================================================
+# Certificate Resources - Status kontrol için
+# ============================================================================
+# Kontrol komutları:
+# kubectl get certificate -n advancedktu
+# kubectl describe certificate advancedktu-tls-cert -n advancedktu
+# kubectl get secret advancedktu-tls-cert -n advancedktu -o yaml
+#
+

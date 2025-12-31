@@ -1,0 +1,117 @@
+---
+# ============================================================================
+# Kubernetes Namespace - Tüm kaynakları izole etmek için
+# ============================================================================
+# Tüm AdvancedKTU kaynakları "advancedktu" namespace'inde çalışacak
+# Bunun faydası: Diğer projeleriyle karışmaz, yönetimi kolay olur
+#
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: advancedktu
+  labels:
+    name: advancedktu
+    environment: production
+    app: advancedktu
+---
+# ============================================================================
+# NetworkPolicy - Güvenlik: Pod'lar arası iletişim kontrolü
+# ============================================================================
+# Tanım: Pod'lar birbirleriyle güvenli şekilde haberleşir
+# Dışarıdan gelen trafiği sadece ingress üzerinden alır
+#
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: advancedktu-network-policy
+  namespace: advancedktu
+spec:
+  podSelector: {}  # Tüm pod'lara uygulanır
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Pod'lar kendi namespace'inden birbirlerine bağlanabilir
+    - from:
+        - podSelector: {}
+          namespaceSelector:
+            matchLabels:
+              name: advancedktu
+  egress:
+    # Pod'lar kendi namespace'ine ve external DNS'e çıkabilir
+    - to:
+        - podSelector: {}
+          namespaceSelector:
+            matchLabels:
+              name: advancedktu
+    # DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # External API'ler
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+---
+# ============================================================================
+# ResourceQuota - Namespace'in kaynakları sınırlaması
+# ============================================================================
+# Tanım: Namespace çok fazla kaynak tüketemesin diye sınır koyarız
+#
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: advancedktu-quota
+  namespace: advancedktu
+spec:
+  hard:
+    requests.cpu: "4"           # Max 4 CPU core
+    requests.memory: "4Gi"       # Max 4GB RAM
+    limits.cpu: "8"              # Max 8 CPU limit
+    limits.memory: "8Gi"         # Max 8GB RAM limit
+    pods: "20"                   # Max 20 pod
+    persistentvolumeclaims: "5"  # Max 5 PVC
+---
+# ============================================================================
+# LimitRange - Pod başına resource sınırlaması
+# ============================================================================
+# Tanım: Her pod'a maksimum kaç CPU/Memory verileceğini belirler
+#
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: advancedktu-limits
+  namespace: advancedktu
+spec:
+  limits:
+    # Pod seviyesinde limitler
+    - type: Pod
+      max:
+        cpu: "2"
+        memory: "2Gi"
+      min:
+        cpu: "100m"
+        memory: "128Mi"
+      default:
+        cpu: "500m"
+        memory: "512Mi"
+      defaultRequest:
+        cpu: "250m"
+        memory: "256Mi"
+    # Container seviyesinde limitler
+    - type: Container
+      max:
+        cpu: "1"
+        memory: "1Gi"
+      min:
+        cpu: "50m"
+        memory: "64Mi"

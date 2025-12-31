@@ -1,0 +1,269 @@
+---
+# ============================================================================
+# Frontend ConfigMap
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: advancedktu
+data:
+  VITE_API_BASE_URL: "http://waste-service.advancedktu.svc.cluster.local:8081"
+  VITE_AUTH_API_URL: "http://auth-service.advancedktu.svc.cluster.local:8080"
+  VITE_AI_API_URL: "http://ai-service.advancedktu.svc.cluster.local:3000"
+  # Nginx config
+  nginx.conf: |
+    server {
+      listen 5174;
+      server_name _;
+      root /app/dist;
+      
+      # Gzip compression
+      gzip on;
+      gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss;
+      
+      # Security Headers
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      
+      # SPA routing
+      location / {
+        try_files $uri $uri/ /index.html;
+      }
+      
+      # API proxy
+      location /api/ {
+        proxy_pass http://waste-service.advancedktu.svc.cluster.local:8081/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+      }
+      
+      # Cache static assets
+      location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+      }
+      
+      # No cache for HTML
+      location ~* \.html$ {
+        expires -1;
+        add_header Cache-Control "public, must-revalidate, proxy-revalidate";
+      }
+    }
+---
+# ============================================================================
+# Frontend Deployment
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: advancedktu
+  labels:
+    app: frontend
+    version: v1
+spec:
+  replicas: 2
+  
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  selector:
+    matchLabels:
+      app: frontend
+  
+  template:
+    metadata:
+      labels:
+        app: frontend
+        version: v1
+    spec:
+      # Security Context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        fsGroup: 101
+      
+      # Init Containers
+      initContainers:
+        - name: wait-for-services
+          image: busybox:1.35
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for Auth Service..."
+              until nc -zv auth-service.advancedktu.svc.cluster.local 8080; do
+                echo "Auth Service not ready, waiting..."
+                sleep 2
+              done
+              echo "Auth Service is ready!"
+              
+              echo "Waiting for Waste Service..."
+              until nc -zv waste-service.advancedktu.svc.cluster.local 8081; do
+                echo "Waste Service not ready, waiting..."
+                sleep 2
+              done
+              echo "Waste Service is ready!"
+              
+              echo "Waiting for AI Service..."
+              until nc -zv ai-service.advancedktu.svc.cluster.local 3000; do
+                echo "AI Service not ready, waiting..."
+                sleep 2
+              done
+              echo "AI Service is ready!"
+      
+      containers:
+        - name: frontend
+          image: advancedktu/frontend:latest
+          imagePullPolicy: Always
+          
+          ports:
+            - name: http
+              containerPort: 5174
+              protocol: TCP
+          
+          # Environment Variables
+          env:
+            - name: VITE_API_BASE_URL
+              value: "https://waste.advancedktu.site"
+            - name: VITE_AUTH_API_URL
+              value: "https://api.advancedktu.site"
+            - name: VITE_AI_API_URL
+              value: "https://ai.advancedktu.site"
+            - name: VITE_APP_URL
+              value: "https://advancedktu.site"
+          
+          # Volume Mounts
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/
+              readOnly: true
+          
+          # Resource Limits
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          
+          # Health Checks
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5174
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5174
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          
+          # Security Context
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: frontend-config
+            items:
+              - key: nginx.conf
+                path: default.conf
+      
+      # Affinity
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - frontend
+                topologyKey: kubernetes.io/hostname
+      
+      terminationGracePeriodSeconds: 30
+---
+# ============================================================================
+# Frontend ClusterIP Service
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: advancedktu
+  labels:
+    app: frontend
+spec:
+  type: ClusterIP
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 5174
+      targetPort: 5174
+      protocol: TCP
+---
+# ============================================================================
+# Frontend HPA
+# ============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontend-hpa
+  namespace: advancedktu
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontend
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# ============================================================================
+# Frontend PDB
+# ============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend-pdb
+  namespace: advancedktu
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: frontend

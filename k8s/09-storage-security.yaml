@@ -1,0 +1,272 @@
+---
+# ============================================================================
+# StorageClass - Depolama sınıfı tanımı
+# ============================================================================
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast
+  namespace: advancedktu
+provisioner: kubernetes.io/no-provisioner
+allowVolumeExpansion: true
+parameters:
+  type: pd-ssd
+volumeBindingMode: WaitForFirstConsumer
+---
+# ============================================================================
+# RBAC - Role Based Access Control
+# ============================================================================
+# ServiceAccount - Pod'ların izni için
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: advancedktu-sa
+  namespace: advancedktu
+---
+# ============================================================================
+# Role - İzinler
+# ============================================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: advancedktu-role
+  namespace: advancedktu
+rules:
+  # Pod'lara bakma izni
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  
+  # ConfigMap'leri okuma izni
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+  
+  # Secret'leri okuma izni (gizli veriler için)
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+  
+  # PVC'leri okuma izni
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list"]
+---
+# ============================================================================
+# RoleBinding - Role'u ServiceAccount'a bağla
+# ============================================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: advancedktu-rolebinding
+  namespace: advancedktu
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: advancedktu-role
+subjects:
+  - kind: ServiceAccount
+    name: advancedktu-sa
+    namespace: advancedktu
+---
+# ============================================================================
+# PodSecurityPolicy - Pod güvenliği
+# ============================================================================
+# ⚠️ K8s 1.25+ da deprecated, Pod Security Standards kullan
+apiVersion: policy/v1
+kind: PodSecurityPolicy
+metadata:
+  name: advancedktu-psp
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default'
+    apparmor.security.beta.kubernetes.io/allowedProfileNames: 'runtime/default'
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: 'runtime/default'
+    apparmor.security.beta.kubernetes.io/defaultProfileName: 'runtime/default'
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  seLinux:
+    rule: 'MustRunAs'
+    seLinuxOptions:
+      level: "s0:c123,c456"
+  supplementalGroups:
+    rule: 'RunAsAny'
+  fsGroup:
+    rule: 'RunAsAny'
+  readOnlyRootFilesystem: false
+---
+# ============================================================================
+# Pod Security Standards - Modern güvenlik
+# ============================================================================
+# ⚠️ Namespace seviyesinde etiket ekle
+# kubectl label namespace advancedktu pod-security.kubernetes.io/enforce=restricted
+---
+# ============================================================================
+# NetworkPolicy - Giren çıkan trafiği kontrol et
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: auth-service-netpol
+  namespace: advancedktu
+spec:
+  podSelector:
+    matchLabels:
+      app: auth-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Ingress Controller'dan
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # MongoDB'ye
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mongodb
+      ports:
+        - protocol: TCP
+          port: 27017
+    # DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# ============================================================================
+# NetworkPolicy - Waste Service
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: waste-service-netpol
+  namespace: advancedktu
+spec:
+  podSelector:
+    matchLabels:
+      app: waste-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8081
+  egress:
+    # MongoDB'ye
+    - to:
+        - podSelector:
+            matchLabels:
+              app: mongodb
+      ports:
+        - protocol: TCP
+          port: 27017
+    # Auth Service'e
+    - to:
+        - podSelector:
+            matchLabels:
+              app: auth-service
+      ports:
+        - protocol: TCP
+          port: 8080
+    # AI Service'e
+    - to:
+        - podSelector:
+            matchLabels:
+              app: ai-service
+      ports:
+        - protocol: TCP
+          port: 3000
+    # DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# ============================================================================
+# Egress Policy - Dış dünyaya çıkış (API çağrıları için)
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-external-egress
+  namespace: advancedktu
+spec:
+  podSelector:
+    matchLabels:
+      app: ai-service
+  policyTypes:
+    - Egress
+  egress:
+    # External API'lere (Google Gemini vs)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    # DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# ============================================================================
+# Secrets - Şifreler (Base64 encoded)
+# ============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+  namespace: advancedktu
+type: Opaque
+data:
+  # admin:KtuMongoDB@password2024
+  MONGO_USERNAME: YWRtaW4=
+  MONGO_PASSWORD: S3R1TW9uZ29EQkBAc3N3b3JkMjAyNA==
+---
+# ============================================================================
+# ImagePullSecret - Private registry için (isteğe bağlı)
+# ============================================================================
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: advancedktu-registry
+#   namespace: advancedktu
+# type: kubernetes.io/dockercfg
+# data:
+#   .dockercfg: <base64-encoded-docker-config>

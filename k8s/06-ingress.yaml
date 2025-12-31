@@ -1,0 +1,203 @@
+---
+# ============================================================================
+# Ingress - Dış erişim için (advancedktu.site)
+# ============================================================================
+# Tanım: Internetten erişim için routing yapı
+# advancedktu.site -> Frontend (root)
+# api.advancedktu.site -> Auth Service
+# waste.advancedktu.site -> Waste Service
+# ai.advancedktu.site -> AI Service
+#
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: advancedktu-ingress
+  namespace: advancedktu
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # HTTPS yönlendirmesi
+    kubernetes.io/ingress.allow-http: "false"
+    # SSL redirect (cert-manager için)
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # CORS headers
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://advancedktu.site"
+spec:
+  # TLS (HTTPS) - Let's Encrypt ile otomatik sertifika
+  tls:
+    - hosts:
+        - advancedktu.site
+        - www.advancedktu.site
+        - api.advancedktu.site
+        - waste.advancedktu.site
+        - ai.advancedktu.site
+      secretName: advancedktu-tls-cert
+  
+  rules:
+    # Frontend - Root domain
+    - host: "advancedktu.site"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 5174
+    
+    # Frontend - www subdomain
+    - host: "www.advancedktu.site"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 5174
+    
+    # Auth Service - api.advancedktu.site
+    - host: "api.advancedktu.site"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-service
+                port:
+                  number: 8080
+    
+    # Waste Service - waste.advancedktu.site
+    - host: "waste.advancedktu.site"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: waste-service
+                port:
+                  number: 8081
+    
+    # AI Service - ai.advancedktu.site
+    - host: "ai.advancedktu.site"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ai-service
+                port:
+                  number: 3000
+---
+# ============================================================================
+# ClusterIssuer - Let's Encrypt HTTPS Sertifikaları
+# ============================================================================
+# Tanım: Otomatik HTTPS sertifikası oluştur (cert-manager gerekli)
+# Kurulum: helm repo add jetstack https://charts.jetstack.io
+#          helm install cert-manager jetstack/cert-manager -n cert-manager --create-namespace
+#
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@advancedktu.site
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+      # HTTP-01 solver
+      - http01:
+          ingress:
+            class: nginx
+      # DNS-01 solver (cloudflare example)
+      # - dns01:
+      #     cloudflare:
+      #       email: admin@advancedktu.site
+      #       apiTokenSecretRef:
+      #         name: cloudflare-api-token
+      #         key: api-token
+---
+# ============================================================================
+# Staging ClusterIssuer (Testing için)
+# ============================================================================
+# Let's Encrypt'in rate limit'i 50/week'tir, test sırasında bu'yu kullan
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: admin@advancedktu.site
+    privateKeySecretRef:
+      name: letsencrypt-staging-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+---
+# ============================================================================
+# Frontend LoadBalancer Service - Dış erişim için
+# ============================================================================
+# Tanım: Frontend'i internet üzerinden erişebilir kıl (Ingress yanı sıra)
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-lb
+  namespace: advancedktu
+  labels:
+    app: frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5174
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 5174
+      protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 3600
+---
+# ============================================================================
+# ConfigMap - Ingress ile ilgili ayarlar
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ingress-config
+  namespace: advancedktu
+data:
+  domain: "advancedktu.site"
+  api-endpoint: "api.advancedktu.site"
+  waste-endpoint: "waste.advancedktu.site"
+  ai-endpoint: "ai.advancedktu.site"
+  cert-issuer: "letsencrypt-prod"
+  tls-enabled: "true"
+---
+# ============================================================================
+# Frontend ConfigMap - API URLs (domain-based)
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config-prod
+  namespace: advancedktu
+data:
+  VITE_API_BASE_URL: "https://waste.advancedktu.site"
+  VITE_AUTH_API_URL: "https://api.advancedktu.site"
+  VITE_AI_API_URL: "https://ai.advancedktu.site"
+  VITE_APP_URL: "https://advancedktu.site"

@@ -1,0 +1,78 @@
+# ============================================================================
+# Kustomization - Tüm manifestoları bir komutla deploy etmek için
+# ============================================================================
+# Kullanım:
+#   kubectl apply -k .
+#   kubectl delete -k .
+#
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Namespace belirle
+namespace: advancedktu
+
+# Tüm manifest dosyaları
+resources:
+  - 00-namespace.yaml
+  - 01-mongodb.yaml
+  - 02-auth-service.yaml
+  - 03-waste-service.yaml
+  - 04-ai-service.yaml
+  - 05-frontend.yaml
+  - 06-ingress.yaml
+  - 07-monitoring.yaml
+  - 08-backup-maintenance.yaml
+  - 09-storage-security.yaml
+  - 10-cert-manager.yaml
+
+# CommonLabels - Tüm kaynağa etiket ekle
+commonLabels:
+  app: advancedktu
+  environment: production
+  managed-by: kustomize
+  version: v1
+
+# CommonAnnotations - Tüm kaynağa annotation ekle
+commonAnnotations:
+  description: "AdvancedKTU - Waste Management System"
+  documentation: "https://github.com/EyupCanbay/advancedKtu"
+  contact: "devops@advancedktu.com"
+
+# Images - Docker image versiyonlarını belirle
+images:
+  - name: advancedktu/auth-service
+    newTag: latest
+  - name: advancedktu/waste-service
+    newTag: latest
+  - name: advancedktu/ai-service
+    newTag: latest
+  - name: advancedktu/frontend
+    newTag: latest
+
+# Replicas - Pod sayısını özelleştir (isteğe bağlı)
+replicas:
+  - name: auth-service
+    count: 2
+  - name: waste-service
+    count: 2
+  - name: ai-service
+    count: 2
+  - name: frontend
+    count: 2
+
+# NamePrefix - Tüm kaynaklar öne prefix ekle (isteğe bağlı)
+# namePrefix: "prod-"
+
+# Vars - Environment variable replace (isteğe bağlı)
+vars:
+  - name: NAMESPACE
+    objref:
+      kind: Namespace
+      name: advancedktu
+  - name: MONGODB_SERVICE
+    objref:
+      kind: Service
+      name: mongodb-service
+    fieldref:
+      fieldpath: metadata.name

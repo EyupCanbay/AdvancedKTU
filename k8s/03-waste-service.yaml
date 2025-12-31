@@ -1,0 +1,273 @@
+---
+# ============================================================================
+# Waste Service ConfigMap
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: waste-service-config
+  namespace: advancedktu
+data:
+  PORT: "8081"
+  DB_NAME: "waste_db"
+  AUTH_SERVICE_URL: "http://auth-service.advancedktu.svc.cluster.local:8080"
+  AI_SERVICE_URL: "http://ai-service.advancedktu.svc.cluster.local:3000"
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "info"
+---
+# ============================================================================
+# Waste Service PersistentVolumeClaim - Upload dosyaları için
+# ============================================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: waste-uploads-pvc
+  namespace: advancedktu
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+---
+# ============================================================================
+# Waste Service Deployment
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: waste-service
+  namespace: advancedktu
+  labels:
+    app: waste-service
+    version: v1
+spec:
+  replicas: 2
+  
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  selector:
+    matchLabels:
+      app: waste-service
+  
+  template:
+    metadata:
+      labels:
+        app: waste-service
+        version: v1
+    spec:
+      # Security Context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      
+      # Init Containers
+      initContainers:
+        - name: wait-for-mongodb
+          image: busybox:1.35
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for MongoDB..."
+              until nc -zv mongodb-service.advancedktu.svc.cluster.local 27017; do
+                echo "MongoDB not ready, waiting..."
+                sleep 2
+              done
+              echo "MongoDB is ready!"
+        
+        - name: wait-for-auth-service
+          image: busybox:1.35
+          command:
+            - 'sh'
+            - '-c'
+            - |
+              echo "Waiting for Auth Service..."
+              until nc -zv auth-service.advancedktu.svc.cluster.local 8080; do
+                echo "Auth Service not ready, waiting..."
+                sleep 2
+              done
+              echo "Auth Service is ready!"
+      
+      containers:
+        - name: waste-service
+          image: advancedktu/waste-service:latest
+          imagePullPolicy: Always
+          
+          ports:
+            - name: http
+              containerPort: 8081
+              protocol: TCP
+          
+          # Environment Variables
+          env:
+            # ConfigMap'ten
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: waste-service-config
+                  key: PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: waste-service-config
+                  key: DB_NAME
+            - name: AUTH_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: waste-service-config
+                  key: AUTH_SERVICE_URL
+            - name: AI_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: waste-service-config
+                  key: AI_SERVICE_URL
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: waste-service-config
+                  key: ENVIRONMENT
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: waste-service-config
+                  key: LOG_LEVEL
+            
+            # MongoDB bağlantısı
+            - name: MONGO_URI
+              value: "mongodb://admin:KtuMongoDB@password2024@mongodb-service.advancedktu.svc.cluster.local:27017/waste_db?authSource=admin"
+          
+          # Volume Mounts
+          volumeMounts:
+            - name: waste-uploads
+              mountPath: /app/uploads
+            - name: tmp
+              mountPath: /tmp
+          
+          # Resource Limits
+          resources:
+            requests:
+              cpu: 150m
+              memory: 256Mi
+            limits:
+              cpu: 750m
+              memory: 768Mi
+          
+          # Health Checks
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+          
+          # Security Context
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      
+      volumes:
+        - name: waste-uploads
+          persistentVolumeClaim:
+            claimName: waste-uploads-pvc
+        - name: tmp
+          emptyDir: {}
+      
+      # Affinity
+      affinity:
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - waste-service
+                topologyKey: kubernetes.io/hostname
+      
+      terminationGracePeriodSeconds: 30
+---
+# ============================================================================
+# Waste Service ClusterIP Service
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: waste-service
+  namespace: advancedktu
+  labels:
+    app: waste-service
+spec:
+  type: ClusterIP
+  selector:
+    app: waste-service
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
+---
+# ============================================================================
+# Waste Service HPA
+# ============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: waste-service-hpa
+  namespace: advancedktu
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: waste-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+# ============================================================================
+# Waste Service PDB
+# ============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: waste-service-pdb
+  namespace: advancedktu
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: waste-service

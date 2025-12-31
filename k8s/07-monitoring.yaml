@@ -1,0 +1,159 @@
+---
+# ============================================================================
+# Prometheus ServiceMonitor - Metrikleri toplaması için
+# ============================================================================
+# Tanım: Prometheus'u pod'ların metriklerini almasını söyle
+# (Prometheus Operator kurulu olması gerekir)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: advancedktu-monitoring
+  namespace: advancedktu
+  labels:
+    app: advancedktu
+spec:
+  selector:
+    matchLabels:
+      app: auth-service
+  endpoints:
+    - port: http
+      interval: 30s
+      path: /metrics
+---
+# ============================================================================
+# PrometheusRule - Alert kuralları
+# ============================================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: advancedktu-alerts
+  namespace: advancedktu
+spec:
+  groups:
+    - name: advancedktu.rules
+      interval: 30s
+      rules:
+        # Pod restarts çok olursa uyar
+        - alert: HighPodRestartRate
+          expr: rate(kube_pod_container_status_restarts_total{namespace="advancedktu"}[15m]) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.pod }} high restart rate"
+            description: "Pod {{ $labels.pod }} is restarting {{ $value }} times/min"
+        
+        # Memory kullanımı yüksek
+        - alert: HighMemoryUsage
+          expr: container_memory_usage_bytes{namespace="advancedktu"} / container_spec_memory_limit_bytes > 0.9
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory usage in {{ $labels.container }}"
+            description: "Container using {{ $value | humanizePercentage }} of allocated memory"
+        
+        # CPU çok yüksek
+        - alert: HighCPUUsage
+          expr: rate(container_cpu_usage_seconds_total{namespace="advancedktu"}[5m]) * 100 > 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU usage in {{ $labels.container }}"
+            description: "Container using {{ $value }}% CPU"
+        
+        # Disk yavaş
+        - alert: PodPendingTooLong
+          expr: time() - kube_pod_created{namespace="advancedktu"} > 300 and kube_pod_status_phase{phase="Pending"} == 1
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.pod }} stuck in Pending"
+            description: "Pod has been pending for {{ $value | humanizeDuration }}"
+---
+# ============================================================================
+# DaemonSet - Node'daki kaynakları takip etmek için
+# ============================================================================
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: advancedktu
+  labels:
+    app: node-exporter
+spec:
+  selector:
+    matchLabels:
+      app: node-exporter
+  template:
+    metadata:
+      labels:
+        app: node-exporter
+    spec:
+      hostNetwork: true
+      hostPID: true
+      
+      containers:
+        - name: node-exporter
+          image: prom/node-exporter:latest
+          ports:
+            - containerPort: 9100
+              hostPort: 9100
+          volumeMounts:
+            - name: proc
+              mountPath: /host/proc
+              readOnly: true
+            - name: sys
+              mountPath: /host/sys
+              readOnly: true
+            - name: rootfs
+              mountPath: /rootfs
+              readOnly: true
+          args:
+            - --path.procfs=/host/proc
+            - --path.sysfs=/host/sys
+            - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+          resources:
+            limits:
+              cpu: 200m
+              memory: 100Mi
+            requests:
+              cpu: 100m
+              memory: 50Mi
+      
+      volumes:
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: sys
+          hostPath:
+            path: /sys
+        - name: rootfs
+          hostPath:
+            path: /
+      
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+        - effect: NoExecute
+          operator: Exists
+---
+# ============================================================================
+# Service - Node Exporter'ı expose etmek için
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-exporter
+  namespace: advancedktu
+  labels:
+    app: node-exporter
+spec:
+  type: ClusterIP
+  selector:
+    app: node-exporter
+  ports:
+    - name: metrics
+      port: 9100
+      targetPort: 9100
